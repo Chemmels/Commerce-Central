@@ -1,0 +1,2456 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Commerce Central</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#002145',
+            accent: '#6CC24A',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #F5F6F7;
+      --surface: #FFFFFF;
+      --text-primary: #002145;
+      --text-muted: #6B7280;
+      --nav-bg: #FFFFFF;
+      --header-bg: #002145;
+      --header-text: #FFFFFF;
+      --accent: #6CC24A;
+      --border: #E5E7EB;
+      --input-bg: #FFFFFF;
+      --today-bg: #EEF2FF;
+      --today-text: #002145;
+      --modal-overlay: rgba(0,0,0,0.5);
+    }
+    [data-theme="dark"] {
+      --bg: #0A0F1A;
+      --surface: #141C2E;
+      --text-primary: #F0F4F8;
+      --text-muted: #9CA3AF;
+      --nav-bg: #141C2E;
+      --header-bg: #060D1A;
+      --header-text: #F0F4F8;
+      --accent: #6CC24A;
+      --border: #1E2A40;
+      --input-bg: #1A2540;
+      --today-bg: #1A2540;
+      --today-text: #6CC24A;
+      --modal-overlay: rgba(0,0,0,0.75);
+    }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); }
+    /* Dark mode global overrides */
+    [data-theme="dark"] .bg-white { background: var(--surface) !important; }
+    [data-theme="dark"] .bg-gray-50 { background: var(--bg) !important; }
+    [data-theme="dark"] .bg-gray-100 { background: var(--input-bg) !important; }
+    [data-theme="dark"] .border-gray-100 { border-color: var(--border) !important; }
+    [data-theme="dark"] .border-gray-200 { border-color: var(--border) !important; }
+    [data-theme="dark"] .border-t { border-color: var(--border) !important; }
+    [data-theme="dark"] .border-b { border-color: var(--border) !important; }
+    [data-theme="dark"] .divide-y > * { border-color: var(--border) !important; }
+    [data-theme="dark"] .divide-gray-50 > * { border-color: var(--border) !important; }
+    [data-theme="dark"] .text-gray-900 { color: var(--text-primary) !important; }
+    [data-theme="dark"] .text-gray-700 { color: #C4CDD8 !important; }
+    [data-theme="dark"] .text-gray-500 { color: var(--text-muted) !important; }
+    [data-theme="dark"] .text-gray-400 { color: var(--text-muted) !important; }
+    [data-theme="dark"] .text-gray-300 { color: #4B5563 !important; }
+    [data-theme="dark"] .text-blue-300 { color: rgba(108,194,74,0.7) !important; }
+    [data-theme="dark"] .hover\:bg-gray-50:hover { background: var(--surface) !important; }
+    [data-theme="dark"] .hover\:bg-gray-100:hover { background: var(--border) !important; }
+    [data-theme="dark"] .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.6) !important; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hero-carousel { scroll-snap-type: x mandatory; }
+    .hero-carousel > div { scroll-snap-align: start; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useCallback, useRef, useEffect } = React;
+
+    // ─── CONSTANTS ────────────────────────────────────────────────────────
+    const ALL_TAGS = [
+      '#finance','#marketing','#consulting','#hiring','#internship',
+      '#networking','#case-comp','#gala','#club-deadlines','#real-estate','#tech'
+    ];
+
+    const TAG_COLORS = {
+      '#finance':       'bg-blue-100 text-blue-800',
+      '#marketing':     'bg-pink-100 text-pink-800',
+      '#consulting':    'bg-purple-100 text-purple-800',
+      '#hiring':        'bg-green-100 text-green-800',
+      '#internship':    'bg-emerald-100 text-emerald-800',
+      '#networking':    'bg-cyan-100 text-cyan-800',
+      '#case-comp':     'bg-orange-100 text-orange-800',
+      '#gala':          'bg-rose-100 text-rose-800',
+      '#club-deadlines':'bg-red-100 text-red-800',
+      '#real-estate':   'bg-amber-100 text-amber-800',
+      '#tech':          'bg-indigo-100 text-indigo-800',
+    };
+
+    // ─── DATA SOURCES ─────────────────────────────────────────────────────
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXxYO4hPPQBx6gNEkF2O1P4dqvc2--KarU9F_nSZJ6Sf-42axhSuwLKPWb8D4X5_pa/exec';
+
+    let CLUBS = {};
+
+    let EVENTS = [];
+    const FORUM_POSTS = [
+      {
+        id: 1,
+        title: 'Best profs for COMM 296?',
+        tag: '#marketing',
+        author: 'Priya S.',
+        timestamp: '2h ago',
+        upvotes: 42,
+        comments: 18,
+        club: 'UBC Marketing Association',
+        content: 'Hey everyone! I\'m registering for COMM 296 next term and wanted to know which professors are best for this course. I\'ve heard there\'s a huge variance in teaching quality. I\'m hoping to actually learn the marketing concepts rather than just memorize for exams. Any recs?\n\nBonus if anyone can share what the workload is like — I\'m also taking COMM 291 and BCOM 301 that term.',
+        replies: [
+          { author: 'Tyler M.', timestamp: '1h 45m ago', text: 'Prof. Chen is amazing — really makes you think about real-world applications. Her midterm is tough but fair. Highly recommend if you can get into her section.', upvotes: 15 },
+          { author: 'Amanda K.', timestamp: '1h 30m ago', text: 'Seconding Prof. Chen! The group project is a lot of work but you actually learn how to do a real market analysis. The skills transferred directly to my club applications.', upvotes: 11 },
+          { author: 'Jason L.', timestamp: '55m ago', text: 'I had Prof. Williams — he\'s super chill and the exams are more straightforward. Good if you want a lighter workload, but less engaging than I hoped.', upvotes: 7 },
+        ],
+      },
+      {
+        id: 2,
+        title: 'Anyone going to the Deloitte info session?',
+        tag: '#hiring',
+        author: 'Marcus W.',
+        timestamp: '5h ago',
+        upvotes: 28,
+        comments: 12,
+        club: 'Deloitte Campus Recruiting',
+        content: 'Just saw the Deloitte info session is coming up on March 20. Is anyone else planning to go? I\'m interested in their consulting practice but not sure if I should also look at audit. Would love to connect beforehand to compare notes — maybe we can grab coffee before the event?',
+        replies: [
+          { author: 'Sophie T.', timestamp: '4h ago', text: 'Going! I\'m targeting their Strategy & Analytics team. Anyone have tips on what to ask during the Q&A? I don\'t want to ask something generic.', upvotes: 9 },
+          { author: 'David R.', timestamp: '3h ago', text: 'I went last year — definitely ask about the day-to-day on the job, not just the headline stuff. The recruiters genuinely appreciate specific, curious questions. Avoid "what does Deloitte do?"', upvotes: 14 },
+          { author: 'Marcus W.', timestamp: '2h ago', text: '@David that\'s a great tip, thanks! Saving this thread. @Sophie let\'s connect before the event!', upvotes: 3 },
+        ],
+      },
+      {
+        id: 3,
+        title: 'Tips for first-year club applications?',
+        tag: '#club-deadlines',
+        author: 'Emily C.',
+        timestamp: '1d ago',
+        upvotes: 67,
+        comments: 24,
+        club: 'Commerce Undergraduate Society',
+        content: 'The CUS club application deadline is coming up on March 22 and I\'m kind of panicking. I want to apply to Finance Club, SMEC, and Real Estate Club. Is applying to 3 clubs too many? Any tips on how to make your application stand out? Especially for competitive clubs like Finance Club — I have basically no finance background.',
+        replies: [
+          { author: 'Ryan P.', timestamp: '23h ago', text: 'Applying to 3 is totally normal! Just make sure your answers are specific to each club — don\'t recycle a generic response. Show you\'ve done your research and know what the club actually does.', upvotes: 22 },
+          { author: 'Michelle F.', timestamp: '20h ago', text: 'For Finance Club specifically, they look for any evidence of genuine interest — even personal investing, tracking markets, or relevant extracurriculars. You don\'t need to know DCF as a first year.', upvotes: 18 },
+          { author: 'Kevin H.', timestamp: '15h ago', text: 'Attend info sessions before the deadline if you can. Shows initiative and you can reference the conversation in your application. Big differentiator over generic apps.', upvotes: 13 },
+        ],
+      },
+      {
+        id: 4,
+        title: 'RBC case comp — who\'s forming teams?',
+        tag: '#case-comp',
+        author: 'Jordan B.',
+        timestamp: '2d ago',
+        upvotes: 35,
+        comments: 20,
+        club: 'RBC Student Competition Team',
+        content: 'The RBC Case Competition is April 12 and I\'m looking for teammates! I\'m a 3rd year majoring in finance with experience from the Jelf Cup last year (we placed 2nd). Need 3 more people — ideally with a mix of finance, strategy, and operations backgrounds. Anyone interested in forming a team?',
+        replies: [
+          { author: 'Natasha V.', timestamp: '1d 22h ago', text: 'Interested! I\'m 2nd year with an operations focus. I did Sprott last semester and finished top 3. DM me if you want to connect.', upvotes: 5 },
+          { author: 'Chris D.', timestamp: '1d 18h ago', text: 'I\'m in if you need a strategy person. Did Jelf Cup too — we might actually know each other haha. Strong in slide decks and storytelling.', upvotes: 4 },
+          { author: 'Jordan B.', timestamp: '1d 10h ago', text: 'DMing both of you now. Still need one more person — ideally someone with an accounting or finance background to anchor our numbers.', upvotes: 3 },
+        ],
+      },
+      {
+        id: 5,
+        title: 'Cold email templates that actually work',
+        tag: '#internship',
+        author: 'Lisa K.',
+        timestamp: '3d ago',
+        upvotes: 89,
+        comments: 31,
+        club: 'Bain & Company',
+        content: 'I landed 3 internship interviews through cold emailing this cycle and wanted to share what worked for me. The key: keep it under 150 words, reference something specific about the person or the company\'s recent news, ask for a 15-minute call (not a job), and follow up exactly once after 1 week. Happy to share my exact template below.',
+        replies: [
+          { author: 'James A.', timestamp: '2d 20h ago', text: 'Please share the template! This is exactly what I\'ve been looking for. Cold outreach terrifies me but I know I need to start.', upvotes: 17 },
+          { author: 'Lisa K.', timestamp: '2d 18h ago', text: 'Here it is:\n\nSubject: Quick question from a Sauder student\n\nHi [Name],\n\nI read your piece on [topic] and your point about [specific detail] really stuck with me. I\'m a [year] commerce student at UBC Sauder exploring careers in [field].\n\nWould you be open to a 15-minute call to share any advice on breaking in? I\'d love to hear your perspective.\n\nThanks,\n[Your name]', upvotes: 45 },
+          { author: 'Sarah M.', timestamp: '2d ago', text: 'This is incredibly generous — thank you for sharing this. Bookmarking and going to try it this week for some VCs I\'ve been afraid to reach out to.', upvotes: 9 },
+        ],
+      },
+      {
+        id: 6,
+        title: 'Is Finance Club worth it in first year?',
+        tag: '#finance',
+        author: 'Alex T.',
+        timestamp: '4d ago',
+        upvotes: 54,
+        comments: 27,
+        club: 'UBC Finance Club',
+        content: 'I\'m a first-year commerce student debating whether to apply to the Finance Club. I don\'t have much finance background yet — will I be completely out of my depth? Or is first year actually a good time to join? I don\'t want to waste the club\'s time if I\'m not ready for it.',
+        replies: [
+          { author: 'Olivia S.', timestamp: '3d ago', text: 'Absolutely worth joining in first year! That\'s literally the best time — you have the most to gain and the club actively wants to develop new talent. Don\'t wait until second year.', upvotes: 21 },
+          { author: 'Brandon C.', timestamp: '2d 22h ago', text: 'I joined in first year with zero finance background. By the end of the year I understood DCF, comparable company analysis, and basic accounting. The learning is on the job and it\'s fast.', upvotes: 19 },
+          { author: 'Alex T.', timestamp: '2d 12h ago', text: 'This is so reassuring — thank you both! Definitely submitting my application before the March 22 deadline now.', upvotes: 6 },
+        ],
+      },
+      {
+        id: 7,
+        title: 'BCG vs Deloitte S&O — real culture difference?',
+        tag: '#consulting',
+        author: 'mbb_or_bust',
+        timestamp: '6h ago',
+        upvotes: 51,
+        comments: 19,
+        club: 'BCG Campus Recruiting',
+        content: 'I have final rounds at both BCG and Deloitte\'s S&O practice coming up next week. I genuinely don\'t know which I\'d prefer if I get offers from both. Can anyone who\'s done an internship or knows people inside speak to the culture differences? I know BCG is technically more prestigious but Deloitte\'s office in Vancouver is massive. Is the work actually different?',
+        replies: [
+          { author: 'consulting_realist', timestamp: '5h ago', text: 'Did Deloitte S&O last summer. Honestly great work — real strategy projects, not just decks. The prestige gap matters less than people think once you\'re actually doing the work.', upvotes: 18 },
+          { author: 'bcg_intern_23', timestamp: '4h ago', text: 'BCG side: smaller teams, more ownership per person, steeper learning curve. The culture is intense but genuinely collaborative. Vancouver office is smaller but tight-knit.', upvotes: 14 },
+          { author: 'mbb_or_bust', timestamp: '3h ago', text: 'This is super helpful. Sounds like both are solid — I\'ll make the call based on which team I connect with better in the final round. Thanks!', upvotes: 4 },
+        ],
+      },
+      {
+        id: 8,
+        title: 'COMM 335 — is it actually the hardest course at Sauder?',
+        tag: '#consulting',
+        author: 'comm_survivor',
+        timestamp: '10h ago',
+        upvotes: 73,
+        comments: 31,
+        club: 'UBC Consulting Club',
+        content: 'Everyone keeps telling me COMM 335 (Strategic Management) is brutal. I\'m planning to take it next term alongside MARK 360 and ORGS 315. Is the workload actually that bad or is it just reputation? I want to take it because consulting firms apparently love seeing it on your transcript, but I don\'t want to tank my GPA.',
+        replies: [
+          { author: 'strategic_survivor', timestamp: '9h ago', text: '335 is genuinely demanding — the case work is constant and the group project takes forever. But it\'s the most useful course I took at Sauder. Consulting firms do notice it.', upvotes: 26 },
+          { author: 'gpa_protector', timestamp: '8h ago', text: 'Don\'t take it with MARK 360 at the same time. Both have huge group components. I did that combo and basically lived in Sauder for 4 months.', upvotes: 22 },
+          { author: 'prof_fan', timestamp: '6h ago', text: 'It depends a lot on which professor you get. Prof. Harrison makes it genuinely interesting. Prof. O\'Brien is more by the book but slightly lighter workload.', upvotes: 9 },
+        ],
+      },
+      {
+        id: 9,
+        title: 'Sprott vs RBC case comp — which is harder to win?',
+        tag: '#case-comp',
+        author: 'casejunkie23',
+        timestamp: '1d ago',
+        upvotes: 38,
+        comments: 16,
+        club: 'Sauder Case Club',
+        content: 'Planning my case competition schedule for April and both the Sprott Business Challenge and the RBC Case Competition overlap. If I can only do one, which gives better prep experience and which looks better on a consulting resume? I placed top 5 at a smaller internal comp last semester.',
+        replies: [
+          { author: 'comp_veteran', timestamp: '23h ago', text: 'Sprott is more prestigious and harder to win — teams from across Canada. RBC is more finance-focused. For consulting recruiting, Sprott placement looks better. Do both if you can swing it.', upvotes: 17 },
+          { author: 'rbc_team_alumni', timestamp: '20h ago', text: 'RBC\'s case quality is excellent and the judges are senior — great experience even if you don\'t win. The feedback alone is worth it for interview prep.', upvotes: 11 },
+        ],
+      },
+      {
+        id: 10,
+        title: 'Best study spots in ESB and around campus?',
+        tag: '#networking',
+        author: 'sauder_frosh',
+        timestamp: '1d ago',
+        upvotes: 84,
+        comments: 42,
+        content: 'First year Sauder student here — still figuring out where to actually study. The ESB main floor is always packed and noisy. Where do upper years go? Looking for spots that are quiet but also have power outlets and decent WiFi. Also open to spots outside Sauder if they\'re not too far.',
+        replies: [
+          { author: 'library_loyalist', timestamp: '23h ago', text: 'ESB Room 2012 is usually quiet and has good tables. For outside Sauder, Koerner Library level 4 is the best on campus — silent, lots of outlets, and you can actually focus.', upvotes: 31 },
+          { author: 'ike_believer', timestamp: '20h ago', text: 'Ike\'s Café in the Irving K. Barber building is lowkey underrated. Not too noisy, good hours, and right next to the bus loop. Great for solo work sessions.', upvotes: 18 },
+          { author: 'home_is_best', timestamp: '15h ago', text: 'Genuinely? The ESB basement lounge at 7am before anyone else shows up. Nobody is ever there and it\'s perfect.', upvotes: 13 },
+        ],
+      },
+      {
+        id: 11,
+        title: 'UMA or SMEC — which looks better on a resume?',
+        tag: '#marketing',
+        author: 'brand_undecided',
+        timestamp: '2d ago',
+        upvotes: 46,
+        comments: 22,
+        content: 'I want to do marketing after Sauder — thinking either brand management at a CPG company or a marketing role at a tech company. Should I join UMA or SMEC? From what I can tell UMA is more case-competition focused and SMEC is more events and networking. Does it actually matter which one you pick for recruiting?',
+        replies: [
+          { author: 'uma_exec', timestamp: '1d 22h ago', text: 'UMA alum here. The Brand Challenge on your resume is genuinely useful for consumer goods interviews — Unilever and P&G recruiters have specifically asked about it. Go UMA if CPG is your target.', upvotes: 19 },
+          { author: 'smec_fan', timestamp: '1d 18h ago', text: 'SMEC is better if you want the agency or startup side. The network is more entrepreneurial and the events bring in digital marketing people. Different vibe, both valid.', upvotes: 12 },
+        ],
+      },
+      {
+        id: 12,
+        title: 'Applied to 5 clubs — am I overextending myself?',
+        tag: '#club-deadlines',
+        author: 'overachiever_irl',
+        timestamp: '2d ago',
+        upvotes: 62,
+        comments: 28,
+        content: 'Sent applications to Finance Club, Consulting Club, SMEC, eClub, and Real Estate Club before the CUS deadline. Now that I\'m done I\'m realizing if I somehow got into all 5 I\'d be completely overwhelmed. Is it normal to apply to this many? And do clubs actually cross-check to see if you applied to competitors?',
+        replies: [
+          { author: 'club_executive', timestamp: '1d 20h ago', text: 'Clubs don\'t cross-check, but if you apply to 5 and write generic answers it will show. Realistically you might get into 1-2 competitive ones. The others are often easier to get into so you could end up with 3.', upvotes: 24 },
+          { author: 'been_there', timestamp: '1d 15h ago', text: 'I applied to 4 in first year, got into 2, and even then barely had time. Clubs are a time commitment — especially if you want to actually contribute and not just show up.', upvotes: 20 },
+          { author: 'overachiever_irl', timestamp: '1d 8h ago', text: 'That\'s actually reassuring — I was stressing that I\'d somehow get into all 5. Hoping for Finance and Consulting Club. Those are my real targets.', upvotes: 5 },
+        ],
+      },
+      {
+        id: 13,
+        title: 'When should I start preparing for PM internships?',
+        tag: '#tech',
+        author: 'pm_curious',
+        timestamp: '3d ago',
+        upvotes: 55,
+        comments: 21,
+        content: 'I\'m a second-year Sauder student interested in product management. I want to intern at a tech company next summer but I have no idea when recruiting starts or how to prepare. Do PM roles recruit on a similar timeline as banking? And what should I be doing right now — case prep, building projects, joining clubs?',
+        replies: [
+          { author: 'googler_in_training', timestamp: '2d 22h ago', text: 'PM recruiting is earlier than you think — Google, Amazon, and Microsoft post roles in July-September for next summer. Start preparing now: join the PM Club, do product teardowns, and practice product design questions.', upvotes: 22 },
+          { author: 'pm_club_exec', timestamp: '2d 18h ago', text: 'Come to PM Club workshops. We specifically prep for PM-style cases: design a product, improve a metric, prioritize a roadmap. Very different from consulting cases.', upvotes: 15 },
+          { author: 'pm_curious', timestamp: '2d 5h ago', text: 'Didn\'t realize it was that early. Going to the Salesforce workshop for sure. Thanks for the reality check.', upvotes: 4 },
+        ],
+      },
+      {
+        id: 14,
+        title: 'Big 5 bank summer analyst recruiting — full timeline?',
+        tag: '#hiring',
+        author: 'bank_shopping',
+        timestamp: '3d ago',
+        upvotes: 91,
+        comments: 37,
+        club: 'TD Campus Recruiting',
+        content: 'I\'m in second year and want to intern at one of the Big 5 banks next summer. Can someone give me the actual recruiting timeline? I keep seeing conflicting info. When do applications open? When are interviews? And is it true that networking coffee chats before the official process actually matter?',
+        replies: [
+          { author: 'rbc_summer_analyst', timestamp: '2d 23h ago', text: 'Applications typically open in July for the following summer. Coffee chats in May–June help a ton — especially at BMO, Scotia, and CIBC where the classes are smaller. Get your LinkedIn sorted NOW.', upvotes: 38 },
+          { author: 'td_intern_done', timestamp: '2d 20h ago', text: 'TD and RBC are the most competitive. First round is usually August (HireVue or phone screen), super days in September. Offers come fast — sometimes same day as super day.', upvotes: 29 },
+          { author: 'bank_shopping', timestamp: '2d 12h ago', text: 'This is exactly what I needed. Starting coffee chat outreach now before the summer. Is LinkedIn InMail actually effective or should I use email?', upvotes: 6 },
+        ],
+      },
+      {
+        id: 15,
+        title: 'McKinsey Insight Program — actually worth applying?',
+        tag: '#internship',
+        author: 'first_yr_keen',
+        timestamp: '3d ago',
+        upvotes: 67,
+        comments: 24,
+        content: 'I\'m a first year and the McKinsey Insight Program deadline is tonight. It says it\'s for first and second years interested in consulting. I have barely any experience — just some high school extracurriculars and a part-time job. Is there any point applying or will it just get filtered out immediately?',
+        replies: [
+          { author: 'insight_alum', timestamp: '2d 22h ago', text: 'Definitely apply. The program is specifically designed for first years with no consulting experience. They want intellectual curiosity and leadership potential, not a pre-built resume. Just write authentically.', upvotes: 29 },
+          { author: 'case_coach', timestamp: '2d 18h ago', text: 'The written questions are everything. Spend most of your time on those — answer specifically and avoid generic consulting-speak. They can tell when it\'s a template answer.', upvotes: 18 },
+          { author: 'first_yr_keen', timestamp: '2d 8h ago', text: 'Submitted! Honestly really happy with how my answers turned out. Fingers crossed. Either way a good exercise in articulating why I want consulting.', upvotes: 7 },
+        ],
+      },
+      {
+        id: 16,
+        title: 'Real estate careers — Vancouver vs Toronto market?',
+        tag: '#real-estate',
+        author: 'prop_curious',
+        timestamp: '4d ago',
+        upvotes: 43,
+        comments: 18,
+        content: 'I\'m seriously interested in real estate as a career — specifically development or investment. Should I be targeting Vancouver firms or is Toronto where all the real action is? Vancouver feels more local and accessible but Toronto seems to have way more deals and firms. Is it worth trying to get experience in Toronto for the summer?',
+        replies: [
+          { author: 'dev_analyst', timestamp: '3d 20h ago', text: 'Vancouver is fantastic for development exposure — the market is active and a lot of mid-size developers actively hire Sauder students. Toronto has more REIT and capital markets action if that\'s your interest.', upvotes: 17 },
+          { author: 're_club_exec', timestamp: '3d 15h ago', text: 'Honestly start in Vancouver — easier to network locally and firms are more accessible for informational interviews. Build experience, then Toronto/Montreal for capital markets later.', upvotes: 14 },
+        ],
+      },
+      {
+        id: 17,
+        title: 'How many mock cases before MBB interviews?',
+        tag: '#case-comp',
+        author: 'caseprep101',
+        timestamp: '4d ago',
+        upvotes: 78,
+        comments: 33,
+        content: 'I have McKinsey and BCG first rounds in 3 weeks. Currently doing about 2 cases per day with a practice partner. Some people say 50+ total cases is the minimum, others say quality over quantity. Where should I be by interview day? And when should I stop doing new frameworks and just drill execution?',
+        replies: [
+          { author: 'mbb_placed', timestamp: '3d 22h ago', text: 'I did ~60 cases over 6 weeks for my McKinsey interview. Around the 40 mark I stopped introducing new frameworks and just drilled communication and synthesis. That last phase was the most valuable.', upvotes: 31 },
+          { author: 'bain_coach', timestamp: '3d 18h ago', text: 'Don\'t neglect the fit interview. McKinsey and Bain weight PEI heavily — "Tell me about a time you led through adversity" matters as much as the case. Have 5-6 tight stories ready.', upvotes: 24 },
+          { author: 'caseprep101', timestamp: '3d 8h ago', text: 'Good call on the PEI. I\'ve been 90% focused on cases. Going to balance it out this week. 60 cases sounds right — I\'m at 38 right now.', upvotes: 5 },
+        ],
+      },
+      {
+        id: 18,
+        title: 'Investment Club vs Finance Club — is there a difference?',
+        tag: '#finance',
+        author: 'fin_frosh',
+        timestamp: '4d ago',
+        upvotes: 52,
+        comments: 20,
+        content: 'I want to go into asset management or equity research eventually. Should I join the Finance Club or the Investment Club? From the website they both seem to cover similar stuff but I\'ve heard the Investment Club is more selective and actually trades. Can someone who\'s been in both explain the real difference?',
+        replies: [
+          { author: 'inv_club_pm', timestamp: '3d 22h ago', text: 'Investment Club member here. We manage a real portfolio — actual stocks, real money. You pitch ideas and defend them under pressure. It\'s more like a buy-side analyst training program than a networking club.', upvotes: 23 },
+          { author: 'finance_club_vp', timestamp: '3d 18h ago', text: 'Finance Club covers the full spectrum — IB, ER, AM, private equity. More people, more networking events, and broader exposure. Better if you\'re still figuring out which finance path to take.', upvotes: 18 },
+        ],
+      },
+      {
+        id: 19,
+        title: 'Ponderosa vs Orchard Commons — Sauder student\'s perspective?',
+        tag: '#networking',
+        author: 'rez_decision',
+        timestamp: '5d ago',
+        upvotes: 59,
+        comments: 25,
+        content: 'Getting my housing choices for next year — deciding between Ponderosa and Orchard Commons. I\'m in Sauder so I want to be somewhere that makes it easy to get to ESB but also has a decent social scene. Anyone been in both or have strong opinions?',
+        replies: [
+          { author: 'ponderosa_survivor', timestamp: '4d 22h ago', text: 'Ponderosa is closer to campus generally and has more of a classic residence vibe. Orchard Commons is newer and nicer but further — you\'ll be on the 68 bus a lot.', upvotes: 22 },
+          { author: 'orchard_stan', timestamp: '4d 18h ago', text: 'Orchard Commons rooms are way nicer and the meal plan food is actually decent. Worth the slightly longer walk if you care about your quality of life.', upvotes: 17 },
+        ],
+      },
+      {
+        id: 20,
+        title: 'SWIB Gala — worth going if you\'re not a member?',
+        tag: '#gala',
+        author: 'gala_curious',
+        timestamp: '5d ago',
+        upvotes: 29,
+        comments: 12,
+        content: 'A friend has an extra SWIB Spring Gala ticket and offered it to me. I\'m a guy and not a SWIB member. Is it weird to go? And is it actually a good networking event or more of a social thing? The venue sounds fancy (Hotel Georgia) and I don\'t want to show up and feel out of place.',
+        replies: [
+          { author: 'swib_exec', timestamp: '4d 20h ago', text: 'Definitely go! The gala is open to guests and has a genuine mix of people. The keynote speaker this year is a senior woman in finance but the networking reception is for everyone. Dress sharp and you\'ll be fine.', upvotes: 12 },
+          { author: 'gala_regular', timestamp: '4d 16h ago', text: 'I\'ve gone two years in a row as a guest. Great networking — the alumnae who attend are very accomplished and happy to chat with students. Totally worth $45.', upvotes: 9 },
+        ],
+      },
+      {
+        id: 21,
+        title: 'PwC vs EY for audit — which is better for CPA path?',
+        tag: '#hiring',
+        author: 'cpa_candidate',
+        timestamp: '5d ago',
+        upvotes: 44,
+        comments: 19,
+        content: 'I\'m deciding between co-op offers at PwC and EY, both in audit. I eventually want to get my CPA and then potentially move into industry. Is there a meaningful difference in training quality or career path? The salaries are basically the same. Should I just pick based on which team I liked better?',
+        replies: [
+          { author: 'pwc_manager', timestamp: '4d 22h ago', text: 'Both are excellent for CPA. PwC has slightly better brand recognition in certain industries. EY\'s audit teams tend to have a bit more energy culturally. Honestly — pick based on the team and manager. That matters more.', upvotes: 19 },
+          { author: 'ey_articling', timestamp: '4d 18h ago', text: 'Fully agree. I chose EY because my senior manager was incredible in the interview. Two years in and that relationship has been the best part of the job.', upvotes: 15 },
+        ],
+      },
+      {
+        id: 22,
+        title: 'Case practice partner wanted — anyone available this week?',
+        tag: '#case-comp',
+        author: 'case_partner_hunt',
+        timestamp: '6d ago',
+        upvotes: 24,
+        comments: 31,
+        content: 'Looking for someone to do cases with this week in the lead-up to my BCG first round. I\'m a 3rd year, intermediate level — not a total beginner but nowhere near MBB-ready yet. Prefer in-person at ESB but open to Zoom. Can do evenings and weekend mornings. Anyone interested?',
+        replies: [
+          { author: 'case_seeker_2', timestamp: '5d 22h ago', text: 'I\'m looking too! 2nd year, have done maybe 20 cases so far. Similar level. DM me and we can set something up for Wednesday evening.', upvotes: 8 },
+          { author: 'consulting_club_tip', timestamp: '5d 18h ago', text: 'Also check the Consulting Club Slack channel — there\'s a dedicated partner matching channel that\'s super active right before recruiting season.', upvotes: 14 },
+        ],
+      },
+      {
+        id: 23,
+        title: 'MARK 360 vs MARK 380 — which is more practical?',
+        tag: '#marketing',
+        author: 'mark_life',
+        timestamp: '6d ago',
+        upvotes: 37,
+        comments: 14,
+        content: 'Choosing between MARK 360 (Consumer Behaviour) and MARK 380 (Digital Marketing) for next term. I want to go into brand management or marketing strategy. Which one is actually more applicable to real job interviews and the work you do in those roles? I can only fit one in.',
+        replies: [
+          { author: 'brand_manager_alum', timestamp: '5d 22h ago', text: 'MARK 360 is essential for brand management — consumer insight is literally the foundation of the job. 380 is more tactical. Go 360 if brand is your goal.', upvotes: 16 },
+          { author: 'digital_mktg_convert', timestamp: '5d 16h ago', text: 'Counterpoint: MARK 380 is more directly applicable in tech marketing. If you\'re open to that, the SEO/SEM and analytics content is stuff you can immediately use in an interview.', upvotes: 11 },
+        ],
+      },
+      {
+        id: 24,
+        title: 'Amazon BA vs Google APM — which to prioritize in second year?',
+        tag: '#internship',
+        author: 'big_tech_dilemma',
+        timestamp: '1w ago',
+        upvotes: 63,
+        comments: 22,
+        content: 'I want to go into product management or business operations at a big tech company. If I can realistically target one for a second-year internship, should I go after the Amazon Business Analyst program or the Google Associate PM program? I know APM is insanely competitive. Is it worth the effort for a second-year student?',
+        replies: [
+          { author: 'apm_reality_check', timestamp: '6d 22h ago', text: 'APM is basically impossible without some CS or very strong PM experience. Most successful APM candidates have coding backgrounds. Amazon BA is far more accessible and still amazing experience.', upvotes: 28 },
+          { author: 'amazon_ba_done', timestamp: '6d 18h ago', text: 'I did Amazon BA last summer — incredible experience. You own actual business metrics, do real analysis, and have a lot of autonomy. Highly recommend targeting it seriously.', upvotes: 19 },
+        ],
+      },
+      {
+        id: 25,
+        title: 'Best food near ESB when you\'re on a tight budget?',
+        tag: '#networking',
+        author: 'hangry_sauder',
+        timestamp: '1w ago',
+        upvotes: 97,
+        comments: 48,
+        content: 'The food in the ESB itself is way too expensive — $15 for a mediocre bowl is not it. What are the actual good and cheap options within a 10-minute walk? I\'ve tried the SUB food court but it closes too early for evening study sessions. Any hidden gems?',
+        replies: [
+          { author: 'budget_foodie', timestamp: '6d 22h ago', text: 'Pie R Squared on University Blvd. $5 slices, open late. Also the AMS Nest lower floor has a Subway and Pita Pit that are way more reasonable than ESB options.', upvotes: 36 },
+          { author: 'meal_plan_regrets', timestamp: '6d 18h ago', text: 'Orchard Commons dining room if you can get in — or Walter Gage. Cheapest real food on campus if you buy a guest meal. Also the Asian food court by Koerner is underrated.', upvotes: 21 },
+          { author: 'hangry_sauder', timestamp: '6d 10h ago', text: 'Pie R Squared is a game changer, didn\'t know it existed. Going there after my 6pm lecture tonight.', upvotes: 8 },
+        ],
+      },
+      {
+        id: 26,
+        title: 'CFA vs CPA as a Sauder undergrad — when to start?',
+        tag: '#finance',
+        author: 'designation_confused',
+        timestamp: '1w ago',
+        upvotes: 58,
+        comments: 26,
+        content: 'I\'m in second year and thinking long-term about professional designations. I want to go into finance (not accounting). CFA seems like the right fit — but I\'ve heard Level 1 is brutal and takes 300+ hours. Should I start prepping as an undergrad or wait until after I\'m working? And does the CFA actually matter for getting a first job?',
+        replies: [
+          { author: 'level1_survivor', timestamp: '6d 20h ago', text: 'CFA Level 1 as an undergrad is very doable if you start 4-5 months out. It won\'t get you a job by itself but it signals seriousness — especially for equity research and buy-side roles.', upvotes: 22 },
+          { author: 'hiring_manager_anon', timestamp: '6d 16h ago', text: 'As someone who screens resumes at an asset manager — CFA progress (even Level 1 passed) genuinely differentiates candidates. Worth the effort if AM or ER is your target.', upvotes: 18 },
+        ],
+      },
+      {
+        id: 27,
+        title: 'Rejected from Finance Club first round — what do I do now?',
+        tag: '#club-deadlines',
+        author: 'first_yr_devastated',
+        timestamp: '1w ago',
+        upvotes: 71,
+        comments: 35,
+        content: 'Just got my Finance Club rejection and I\'m honestly crushed. I spent so much time on the application. Is there any point trying again next cycle? And in the meantime what can I do to actually build finance skills without being in the club? I don\'t want to fall behind while everyone else is in their club doing deals.',
+        replies: [
+          { author: 'rejection_survivor', timestamp: '6d 22h ago', text: 'I got rejected twice before getting in. Each time I added real experience — personal investing, CFA prep, side projects. By third application I was way better prepared and it showed.', upvotes: 28 },
+          { author: 'self_study_works', timestamp: '6d 18h ago', text: 'Go through Wall Street Prep or Breaking Into Wall Street online. Model real companies using 10-Ks. Build a few DCFs. That\'s more valuable than most of what clubs teach anyway, and you own it fully.', upvotes: 23 },
+          { author: 'first_yr_devastated', timestamp: '6d 8h ago', text: 'Thank you both. Starting WSP tomorrow. And apparently the Investment Club is still accepting members — going to that info session.', upvotes: 7 },
+        ],
+      },
+      {
+        id: 28,
+        title: 'COMM 457 — is the case writing elective actually useful?',
+        tag: '#consulting',
+        author: 'senior_sauder',
+        timestamp: '1w ago',
+        upvotes: 33,
+        comments: 13,
+        content: 'Considering COMM 457 (Business Writing for Strategy) as an elective next year. I\'ve heard it\'s writing-heavy and the prof is very demanding about structure and precision. Is it actually useful for consulting or banking recruiting? Or is it one of those courses that sounds impressive but doesn\'t actually help?',
+        replies: [
+          { author: 'consulted_after', timestamp: '6d 22h ago', text: 'Took it, went to McKinsey — the course was directly useful. Being able to write a clear, structured recommendation in an hour under pressure is exactly what consulting asks of you. 10/10 recommend.', upvotes: 15 },
+          { author: 'banker_not_writer', timestamp: '6d 18h ago', text: 'Less relevant for banking — you\'ll be in Excel more than Word. But if consulting is the goal, the structured writing skills are genuinely transferable to case structuring too.', upvotes: 9 },
+        ],
+      },
+      {
+        id: 29,
+        title: 'Cold emails not working — what am I doing wrong?',
+        tag: '#internship',
+        author: 'cold_email_rut',
+        timestamp: '1w ago',
+        upvotes: 66,
+        comments: 29,
+        content: 'I\'ve sent 30+ cold emails to professionals over the past month and gotten maybe 2 responses. I\'m following all the advice — short email, personalized opener, ask for a call not a job. Am I just unlucky or is there something systematically wrong? How many cold emails should I realistically expect to convert into actual calls?',
+        replies: [
+          { author: 'networking_nerd', timestamp: '6d 22h ago', text: 'An industry average response rate for cold emails is 5-15%. 2 from 30 is actually normal. The key is volume AND quality — focus on people with a UBC connection who are more likely to respond.', upvotes: 27 },
+          { author: 'linkedin_approach', timestamp: '6d 18h ago', text: 'LinkedIn InMail outperforms cold email for senior people. Also — time your emails strategically. Tuesday-Thursday morning sends get significantly better response rates than Monday or Friday.', upvotes: 21 },
+          { author: 'cold_email_rut', timestamp: '6d 10h ago', text: 'Didn\'t know about the UBC connection angle. Going to filter my list to people with Sauder or UBC backgrounds first and see if that moves the needle.', upvotes: 5 },
+        ],
+      },
+      {
+        id: 30,
+        title: 'Real Estate Club site tour — what to expect?',
+        tag: '#real-estate',
+        author: 'toured_it',
+        timestamp: '8d ago',
+        upvotes: 28,
+        comments: 10,
+        content: 'Signed up for the UBC Real Estate Club Vancouver development site tour in April. Never been on anything like this before. What should I wear, what questions should I ask the development manager, and is it actually educational or more of just a fun field trip? I want to make the most of it.',
+        replies: [
+          { author: 're_club_vp', timestamp: '7d 22h ago', text: 'Wear closed-toe shoes — it\'s a real construction site. Good questions to ask: how was the project financed, what\'s the timeline from acquisition to completion, and what\'s the biggest risk factor on this project.', upvotes: 12 },
+          { author: 'development_fan', timestamp: '7d 18h ago', text: 'It\'s genuinely educational if you engage. The development manager was surprisingly candid at last year\'s tour about what went wrong on the project — more useful than any textbook.', upvotes: 9 },
+        ],
+      },
+      {
+        id: 31,
+        title: 'KPMG vs Deloitte vs EY for Advisory — real differences?',
+        tag: '#hiring',
+        author: 'big4_comparing',
+        timestamp: '8d ago',
+        upvotes: 48,
+        comments: 21,
+        content: 'I\'m targeting Advisory roles at the Big 4 — specifically the strategy and transactions side rather than audit. Is there actually a meaningful difference between KPMG Deal Advisory, Deloitte S&O, and EY Strategy & Transactions for a first-year hire? Or does it mostly come down to which offer you get?',
+        replies: [
+          { author: 'deloitte_s_and_o', timestamp: '7d 22h ago', text: 'Deloitte S&O is generally seen as the most strategy-focused among the Big 4 — more M&A and market entry work than the others. EY SaT has great transaction and due diligence work. KPMG Deal Advisory is solid but slightly behind in brand.', upvotes: 19 },
+          { author: 'big4_mover', timestamp: '7d 18h ago', text: 'Honestly, for a first-year hire the team you work with matters more than the firm. Sit in on all three info sessions and pay attention to how the partners and seniors talk about the work.', upvotes: 14 },
+        ],
+      },
+      {
+        id: 32,
+        title: 'Anyone done a Scotiabank co-op? How was it?',
+        tag: '#internship',
+        author: 'scotia_curious',
+        timestamp: '8d ago',
+        upvotes: 36,
+        comments: 15,
+        content: 'I have an interview for Scotiabank\'s summer analyst program in Capital Markets. I\'ve heard mixed things — some people say it\'s a great experience, others say Scotia is less prestigious than RBC or TD so it\'s not worth it. Is that reputation fair or is the work actually solid?',
+        replies: [
+          { author: 'scotia_intern_done', timestamp: '7d 22h ago', text: 'Did Scotia Capital Markets last summer — the work is genuinely challenging and the desk exposure is real. People underestimate Scotia. They have a strong derivatives business and global FX desk.', upvotes: 16 },
+          { author: 'prestige_reality', timestamp: '7d 16h ago', text: 'The prestige difference between Big 5 banks is way overblown by students. Recruiters care about the quality of your experience and what you did, not which bank\'s logo is on the offer letter.', upvotes: 13 },
+        ],
+      },
+      {
+        id: 33,
+        title: 'Vancouver cost of living as a Sauder student — how do you manage?',
+        tag: '#networking',
+        author: 'rent_is_wild',
+        timestamp: '9d ago',
+        upvotes: 82,
+        comments: 44,
+        content: 'Just moved off-campus for the first time and genuinely shocked by Vancouver rent. Paying $1,450/month for a shared room in Kitsilano. Between rent, groceries, transit, and course materials I\'m bleeding money. How are other Sauder students managing? Do most people have part-time jobs or are there other options?',
+        replies: [
+          { author: 'budget_veteran', timestamp: '8d 22h ago', text: 'UBC off-campus housing near 49th Ave is significantly cheaper than Kits — look around Fraser Street area. Takes 30 min on the 49 bus but you can save $300-400/month. Totally worth it.', upvotes: 34 },
+          { author: 'ta_income', timestamp: '8d 18h ago', text: 'TA and RA positions at Sauder pay well and look great on a resume. Apply for them early — they fill up fast. Combined with bursary eligibility it makes a real difference.', upvotes: 22 },
+          { author: 'rent_is_wild', timestamp: '8d 10h ago', text: 'Didn\'t know about the TA option — going to ask my COMM 291 prof if they need anyone next term. And will look at the Fraser Street area. Thanks for the suggestions.', upvotes: 7 },
+        ],
+      },
+      {
+        id: 34,
+        title: 'AKPsi gala tickets — can non-members buy them?',
+        tag: '#gala',
+        author: 'gala_crasher',
+        timestamp: '9d ago',
+        upvotes: 21,
+        comments: 9,
+        content: 'I\'ve heard the AKPsi Spring Formal is an amazing event and I want to go. I\'m not an AKPsi member and wasn\'t sure if tickets are sold publicly or if you need to be invited by a member. Also — is the Fairmont Pacific Rim a realistic venue for students? What\'s the vibe actually like?',
+        replies: [
+          { author: 'akpsi_brother', timestamp: '8d 22h ago', text: 'You need to be brought as a guest by an AKPsi member. But if you know anyone in the fraternity it\'s easy to get a ticket — most brothers bring friends. Ask around on the Sauder Facebook group.', upvotes: 9 },
+          { author: 'attended_as_guest', timestamp: '8d 18h ago', text: 'Went as a guest last year. The Fairmont venue is genuinely spectacular — better than most galas I\'ve been to. The crowd is mixed: AKPsi brothers, their dates, and invited friends. Very fun night.', upvotes: 7 },
+        ],
+      },
+      {
+        id: 35,
+        title: 'Marketing internships in Vancouver — where should I look?',
+        tag: '#marketing',
+        author: 'yvr_marketer',
+        timestamp: '9d ago',
+        upvotes: 39,
+        comments: 17,
+        content: 'I want a marketing internship in Vancouver specifically — I don\'t want to move for a summer. The obvious big brands are hard to break into. Are there good marketing agencies, startups, or mid-size companies in Vancouver that are realistic targets? Any specific companies Sauder students have interned at before?',
+        replies: [
+          { author: 'yvr_agency_intern', timestamp: '8d 22h ago', text: 'Hootsuite, Lush Cosmetics, Arc\'teryx, and Herschel Supply Co all have marketing teams that hire interns. Also look at Sid Lee and Cossette for agency side. LinkedIn Vancouver + marketing + internship is your best filter.', upvotes: 17 },
+          { author: 'startup_mktg', timestamp: '8d 18h ago', text: 'Don\'t sleep on Vancouver\'s startup scene. Growth marketing at a Series A/B company is incredible experience and way easier to get if you have strong digital skills. Lots on AngelList.', upvotes: 12 },
+        ],
+      },
+      {
+        id: 36,
+        title: 'Sauder Case Club novice bracket — how to prepare?',
+        tag: '#case-comp',
+        author: 'case_newbie',
+        timestamp: '10d ago',
+        upvotes: 33,
+        comments: 15,
+        content: 'Registered for the Sauder Case Club internal competition in the novice bracket. I\'ve done about 10 cases so far but I\'m still pretty rough. What should I focus on in the next two weeks to not embarrass myself? Is it more about the frameworks or the communication style?',
+        replies: [
+          { author: 'novice_winner', timestamp: '9d 22h ago', text: 'At novice level, communication and structure matter way more than framework memorization. Judges want to see clear thinking out loud, not a perfectly memorized profitability tree. Be calm and organized.', upvotes: 14 },
+          { author: 'case_club_exec_2', timestamp: '9d 18h ago', text: 'Practice your issue tree on paper before jumping in. Structuring the problem clearly in the first 2 minutes gets you most of the way there at novice level. Good luck!', upvotes: 10 },
+        ],
+      },
+      {
+        id: 37,
+        title: 'TD vs BMO vs Scotia summer analyst — anyone have insight?',
+        tag: '#finance',
+        author: 'big5_ranking',
+        timestamp: '10d ago',
+        upvotes: 56,
+        comments: 24,
+        content: 'Targeting all three banks for summer analyst roles in Capital Markets. I know RBC and TD are generally seen as top tier but how does BMO compare? And I\'ve heard Scotia is punching above its weight lately with some big mandates. Does the bank brand actually matter post-internship or is it more about what desk you\'re on?',
+        replies: [
+          { author: 'capital_markets_vet', timestamp: '9d 22h ago', text: 'Desk matters more than bank brand in capital markets. Being on a strong equity desk at BMO beats a quiet desk at TD. Research the specific groups — don\'t just rank by overall bank prestige.', upvotes: 23 },
+          { author: 'bmo_intern_done', timestamp: '9d 16h ago', text: 'BMO Equity Research is excellent and often more accessible than TD or RBC for the same role. Strong mentorship program too. Don\'t underestimate them based on name.', upvotes: 17 },
+        ],
+      },
+      {
+        id: 38,
+        title: 'McKinsey vs Bain culture — is the difference real?',
+        tag: '#consulting',
+        author: 'mbb_culture_check',
+        timestamp: '10d ago',
+        upvotes: 44,
+        comments: 19,
+        content: 'I always hear that McKinsey is more formal and hierarchical while Bain is more collegial and fun. Is this actually true based on real experience or is it just recruiting mythology at this point? Both firms pitch themselves as collaborative — is there actually a difference you\'d notice as a first-year hire?',
+        replies: [
+          { author: 'mckinsey_associate', timestamp: '9d 22h ago', text: 'Former McKinsey here — the formal reputation is slightly real but overblown. Team culture varies by office and manager more than firm. Vancouver McKinsey office specifically is quite collaborative compared to Toronto.', upvotes: 18 },
+          { author: 'bain_bc', timestamp: '9d 16h ago', text: 'Bain\'s reputation for team cohesion is well-earned. "One team" culture is intentional — there\'s more structured team bonding and fewer silos between junior and senior staff. Both are great; the difference is subtle.', upvotes: 14 },
+        ],
+      },
+      {
+        id: 39,
+        title: 'Behavioural interview prep — how many stories do you actually need?',
+        tag: '#hiring',
+        author: 'burnt_out_but_ok',
+        timestamp: '11d ago',
+        upvotes: 69,
+        comments: 27,
+        content: 'Prepping for banking and consulting interviews next month. Every guide says "prepare multiple stories for each competency" but I\'m finding it impossible to prep 30+ distinct stories — I just haven\'t done that many impressive things yet. Is it realistic to have 6-8 solid stories that you flex across multiple questions, or do interviewers actually notice if you reuse them?',
+        replies: [
+          { author: 'interview_coach', timestamp: '10d 22h ago', text: 'You need 6-8 genuinely strong, specific stories that can flex. Leadership, influence without authority, failure/growth, teamwork conflict, and initiative are the main pillars. Interviewers don\'t expect 30 stories — they expect 6 great ones.', upvotes: 29 },
+          { author: 'made_it_through', timestamp: '10d 18h ago', text: 'I got into banking with 7 stories. The key is knowing them cold and being able to adapt to the exact question asked without sounding scripted. Quality over quantity is absolutely right.', upvotes: 22 },
+        ],
+      },
+      {
+        id: 40,
+        title: 'Data Science Club workshops — worth it with no coding background?',
+        tag: '#tech',
+        author: 'data_biz',
+        timestamp: '11d ago',
+        upvotes: 41,
+        comments: 16,
+        content: 'I\'m a finance major with zero coding experience. The Data Science Club is running a workshop on data analytics for business students and I\'m tempted to go, but I\'m worried I\'ll be completely lost. Is it actually accessible for non-technical people or is "no coding required" just marketing?',
+        replies: [
+          { author: 'ds_club_organizer', timestamp: '10d 22h ago', text: 'This workshop is genuinely designed for business students. We start with Excel and Tableau — no Python required. You\'ll leave with something you can put on a resume. Come as a total beginner, that\'s the target audience.', upvotes: 17 },
+          { author: 'converted_biz_student', timestamp: '10d 18h ago', text: 'I went last semester with zero background and learned Tableau in a day. Got asked about it in a finance interview two weeks later. Very worth going.', upvotes: 13 },
+        ],
+      },
+      {
+        id: 41,
+        title: 'Mental health during recruiting season — how do you actually cope?',
+        tag: '#hiring',
+        author: 'recruit_season_tired',
+        timestamp: '11d ago',
+        upvotes: 103,
+        comments: 52,
+        content: 'Genuinely burnt out. Doing cases every day, sending cold emails, going to info sessions, keeping my GPA up — it feels like there\'s no end. Everyone around me seems like they\'re handling it fine and I\'m barely keeping up. How do actual Sauder students cope with this? Is it normal to feel this way or am I doing something wrong?',
+        replies: [
+          { author: 'been_through_it', timestamp: '10d 22h ago', text: 'You\'re not doing anything wrong — this is just genuinely hard. The people "handling it fine" are mostly just not showing it. Set limits: one rest day a week, no case prep after 10pm. Non-negotiable.', upvotes: 41 },
+          { author: 'therapy_helped', timestamp: '10d 18h ago', text: 'UBC Counselling Services has same-week appointments for students in acute stress. I used them during recruiting and it made a real difference. Not a weakness — a strategy.', upvotes: 34 },
+          { author: 'recruit_season_tired', timestamp: '10d 10h ago', text: 'Thank you both. Booked a counselling appointment for Thursday. And taking Sunday completely off this weekend. Even reading these replies helped.', upvotes: 12 },
+        ],
+      },
+      {
+        id: 42,
+        title: 'Real estate development vs brokerage vs REIT — which path?',
+        tag: '#real-estate',
+        author: 're_aspirant',
+        timestamp: '12d ago',
+        upvotes: 47,
+        comments: 18,
+        content: 'Seriously considering real estate as a career but overwhelmed by how many different paths exist. Development, brokerage, REIT investing, real estate finance at a bank — they all sound different. What do each of these actually look like day-to-day and which is most accessible as a Sauder grad with no prior real estate experience?',
+        replies: [
+          { author: 're_dev_analyst', timestamp: '11d 22h ago', text: 'Development is the most hands-on — you\'re building things. It takes longer to see outcomes but you develop deep skills in finance, zoning, and construction. Most accessible entry: analyst at a mid-size developer.', upvotes: 19 },
+          { author: 'reit_analyst', timestamp: '11d 18h ago', text: 'REIT investing from the finance side is very Excel and model-heavy — closer to equity research. Great if you like public markets. Brokerage is more sales and relationship-driven, faster to money but grind-y early on.', upvotes: 15 },
+        ],
+      },
+      {
+        id: 43,
+        title: 'SIBC gala — is it worth going if you\'re not into international business?',
+        tag: '#gala',
+        author: 'gala_curious3',
+        timestamp: '12d ago',
+        upvotes: 19,
+        comments: 8,
+        content: 'SIBC is hosting their International Spring Gala in late April and a friend invited me. I\'m a finance major with no particular interest in international business specifically — but I heard it\'s a great networking event and the venue sounds nice. Is it worth the $55 ticket if you\'re going more for the social/networking aspect?',
+        replies: [
+          { author: 'sibc_member', timestamp: '11d 22h ago', text: 'The gala is genuinely fun even if international business isn\'t your thing. The crowd is diverse and the conversations are interesting. Worth it for the networking alone — you don\'t need to be "international" to enjoy it.', upvotes: 8 },
+          { author: 'went_last_yr', timestamp: '11d 18h ago', text: 'The cultural performances alone are worth it. And the food is excellent — they do it properly. Go for the experience.', upvotes: 6 },
+        ],
+      },
+      {
+        id: 44,
+        title: 'How do I build a marketing portfolio as a student?',
+        tag: '#marketing',
+        author: 'portfolio_zero',
+        timestamp: '12d ago',
+        upvotes: 53,
+        comments: 23,
+        content: 'Everyone says you need a portfolio for marketing roles but I genuinely don\'t know what to put in it as a student with no marketing work experience. Should I make up projects? Document work I did in club events? I\'m applying for marketing internships next summer and my resume feels thin.',
+        replies: [
+          { author: 'mktg_intern_hired', timestamp: '11d 22h ago', text: 'Make spec work — pick a brand you love and create a mock campaign for them. Strategy + execution + results framework. Present it as "independent project." Hiring managers respect initiative over perfect credentials.', upvotes: 22 },
+          { author: 'uma_alum_2', timestamp: '11d 18h ago', text: 'Document EVERYTHING from clubs — case competition decks, event materials you designed, Instagram content you ran. If you can show the thought process behind decisions, that\'s a portfolio.', upvotes: 17 },
+        ],
+      },
+      {
+        id: 45,
+        title: 'Accounting major at Sauder — is there a career ceiling?',
+        tag: '#finance',
+        author: 'acc_or_fin',
+        timestamp: '13d ago',
+        upvotes: 48,
+        comments: 22,
+        content: 'I\'m deciding between specializing in accounting or finance at Sauder. I like accounting but everyone keeps telling me finance has more "upside" and that accounting majors are just going to Big 4. Is that actually true? Are accounting majors limited in what careers they can pursue, or is that just a finance bro myth?',
+        replies: [
+          { author: 'cfo_track', timestamp: '12d 22h ago', text: 'Accounting is one of the most versatile paths in Sauder if you go beyond Big 4. The CPA opens CFO tracks at companies, controller roles, finance director positions — these often pay more than mid-level IB jobs.', upvotes: 20 },
+          { author: 'switched_to_ib', timestamp: '12d 18h ago', text: 'I majored in accounting and pivoted to investment banking through networking. The accounting background actually helped — I understood financials better than most finance majors. The "ceiling" isn\'t real.', upvotes: 16 },
+        ],
+      },
+      {
+        id: 46,
+        title: 'Net Impact Club — is it just for sustainability-focused people?',
+        tag: '#networking',
+        author: 'green_biz_curious',
+        timestamp: '13d ago',
+        upvotes: 22,
+        comments: 10,
+        content: 'Considering joining Net Impact but I\'m not sure I\'m passionate enough about sustainability specifically. I\'m more interested in the general networking and the business skills development. Is Net Impact worth joining if you\'re not 100% committed to impact careers, or would I be taking a spot from someone who really cares?',
+        replies: [
+          { author: 'net_impact_exec', timestamp: '12d 22h ago', text: 'Net Impact welcomes curious students — we\'re not a purity test. A lot of our best members came in skeptical and left convinced. The business case for sustainability is interesting regardless of your ideology.', upvotes: 10 },
+          { author: 'impact_adjacent', timestamp: '12d 16h ago', text: 'I joined for the speakers and stayed for the community. You don\'t need to be committed to impact careers — just open-minded. The networking is genuinely broad.', upvotes: 7 },
+        ],
+      },
+      {
+        id: 47,
+        title: 'Supply chain careers after Sauder — realistic expectations?',
+        tag: '#internship',
+        author: 'scm_student',
+        timestamp: '14d ago',
+        upvotes: 31,
+        comments: 13,
+        content: 'I\'m taking ORGS 370 (Supply Chain Management) and actually loving it, which surprised me. Is there a realistic path into supply chain careers from Sauder? I\'ve always assumed it\'s more of an engineering track. And what do early supply chain careers actually look like — what companies hire and what\'s the salary range?',
+        replies: [
+          { author: 'supply_chain_hire', timestamp: '13d 22h ago', text: 'Amazon, Loblaws, Canadian Tire, and IKEA all actively recruit Sauder grads for supply chain and ops roles. Starting salaries range from $55-75K. It\'s underrated and demand is high — the field is short on talent.', upvotes: 14 },
+          { author: 'scl_club_pres', timestamp: '13d 18h ago', text: 'Come to the SCL Club symposium in April — there will be Amazon Logistics and Port Authority professionals there. Great way to understand what the field actually looks like at different organizations.', upvotes: 9 },
+        ],
+      },
+      {
+        id: 48,
+        title: 'HRMA — is HR actually a good career from Sauder?',
+        tag: '#hiring',
+        author: 'hr_curious',
+        timestamp: '14d ago',
+        upvotes: 35,
+        comments: 16,
+        content: 'I took ORGS 315 and found the organizational behavior content way more interesting than I expected. Now I\'m wondering if HR or people ops is a real career path worth considering from Sauder. Most of my classmates are gunning for banking or consulting. Am I crazy to be interested in HR? What does the career path and pay actually look like?',
+        replies: [
+          { author: 'hr_director_anon', timestamp: '13d 22h ago', text: 'Not crazy at all. HRBP roles at tech companies start at $65-85K and senior HR directors at large firms can hit $200K+. The field gets more interesting with the rise of people analytics and AI in talent management.', upvotes: 15 },
+          { author: 'people_ops_convert', timestamp: '13d 16h ago', text: 'I did HR at a tech startup and it was genuinely one of the most strategic roles in the company. You\'re directly involved in building the organization. Sauder\'s ORGS courses are surprisingly good prep.', upvotes: 11 },
+        ],
+      },
+      {
+        id: 49,
+        title: 'BSEC Sports Industry Night — what to expect?',
+        tag: '#networking',
+        author: 'sports_fan_sauder',
+        timestamp: '15d ago',
+        upvotes: 26,
+        comments: 11,
+        content: 'Bought a ticket to the BSEC Sports Industry Night in April. I love sports and I\'m interested in sports business but I feel like I know nothing about the industry professionally. What kinds of people show up to this event and what should I talk about? I don\'t want to just fanboy over the Canucks people.',
+        replies: [
+          { author: 'bsec_exec', timestamp: '14d 22h ago', text: 'The crowd is a mix of professionals from sports orgs, media, and sponsors, plus Sauder students. Come with questions about their career path — most people love talking about how they broke in. Show genuine curiosity, not fandom.', upvotes: 11 },
+          { author: 'sports_biz_convert', timestamp: '14d 18h ago', text: 'Ask about the business model of sports franchises — ticket revenue, sponsorships, media rights. These are things professionals love talking about and it shows you get it. Way better than "what\'s it like being around the Canucks."', upvotes: 8 },
+        ],
+      },
+      {
+        id: 50,
+        title: 'Consulting Club vs Big 4 case prep — which route is actually better?',
+        tag: '#consulting',
+        author: 'not_a_keener',
+        timestamp: '15d ago',
+        upvotes: 57,
+        comments: 24,
+        content: 'Debating between heavily investing in the UBC Consulting Club route (internal comps, coached practice, club community) vs doing Deloitte and EY-sponsored case prep events and workshops. I only have limited time. For someone targeting Deloitte S&O specifically, which gives me better prep and better access to the recruiters who actually make hiring decisions?',
+        replies: [
+          { author: 'deloitte_hired', timestamp: '14d 22h ago', text: 'Consulting Club for prep quality, Big 4 events for recruiter access. They\'re complementary — don\'t treat it as either/or. Club coaching is better for pure case skill, but showing up at Deloitte events is how you get your name known before applications open.', upvotes: 24 },
+          { author: 'case_club_vp_2', timestamp: '14d 18h ago', text: 'The Consulting Club also has direct relationships with Deloitte and other firm sponsors. Performing well in club comps is literally noticed by recruiting contacts. It\'s not separate from the firm relationships.', upvotes: 18 },
+          { author: 'not_a_keener', timestamp: '14d 8h ago', text: 'That framing helps a lot — I was thinking about it wrong. Going to prioritize club coaching for skills and make sure I show up to every Deloitte-branded event too.', upvotes: 6 },
+        ],
+      },
+    ];
+
+    // ─── UTILS ────────────────────────────────────────────────────────────
+    function normalizeDate(dateStr) {
+      if (!dateStr) return null;
+      const s = dateStr.trim();
+      // Already YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00');
+      // M/D/YYYY or MM/DD/YYYY
+      const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (slash) return new Date(`${slash[3]}-${slash[1].padStart(2,'0')}-${slash[2].padStart(2,'0')}T00:00:00`);
+      // Fallback: let the browser try
+      const d = new Date(s);
+      return isNaN(d) ? null : d;
+    }
+    function formatDate(dateStr) {
+      const d = normalizeDate(dateStr);
+      return d ? d.toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' }) : dateStr;
+    }
+    function formatShortDate(dateStr) {
+      const d = normalizeDate(dateStr);
+      return d ? d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : dateStr;
+    }
+
+    // ─── TAG PILL ─────────────────────────────────────────────────────────
+    function TagPill({ tag, selected, onClick }) {
+      const color = TAG_COLORS[tag] || 'bg-gray-100 text-gray-700';
+      if (onClick) {
+        return (
+          <button
+            onClick={() => onClick(tag)}
+            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${selected ? '' : `${color} border-transparent opacity-80`}`}
+            style={selected ? { background: '#6CC24A', color: '#002145', borderColor: '#6CC24A' } : {}}
+          >
+            {tag}
+          </button>
+        );
+      }
+      return (
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
+          {tag}
+        </span>
+      );
+    }
+
+    // ─── TAG FILTER ROW ───────────────────────────────────────────────────
+    function TagFilterRow({ selectedTags, onToggle }) {
+      return (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-4">
+          {ALL_TAGS.map(tag => (
+            <TagPill key={tag} tag={tag} selected={selectedTags.includes(tag)} onClick={onToggle} />
+          ))}
+        </div>
+      );
+    }
+
+    // ─── EVENT CARD ───────────────────────────────────────────────────────
+    function EventCard({ event, onClick, onClubClick }) {
+      return (
+        <div
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform"
+          onClick={() => onClick(event)}
+        >
+          <div className="flex items-start justify-between mb-2 gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-gray-900 text-sm leading-snug">{event.title}</h3>
+              <button
+                className="text-xs font-medium mt-0.5 hover:underline text-left" style={{ color: 'var(--accent)' }}
+                onClick={e => { e.stopPropagation(); onClubClick(event.club); }}
+              >
+                {event.club}
+              </button>
+            </div>
+            <div className="flex-shrink-0">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap" style={{ color: '#002145', background: '#EEF2FF' }}>
+                {formatShortDate(event.date)}
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 line-clamp-2 mb-3">{event.description}</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {event.tags.map(t => <TagPill key={t} tag={t} />)}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── EVENT DETAIL MODAL ───────────────────────────────────────────────
+    function EventDetailModal({ event, onClose, onClubClick }) {
+      return (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
+          <div className="absolute inset-0" style={{ background: 'var(--modal-overlay)' }} />
+          <div
+            className="relative rounded-t-3xl max-h-[88%] overflow-y-auto"
+            style={{ background: 'var(--surface)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-2 sticky top-0 z-10" style={{ background: 'var(--surface)' }}>
+              <div className="w-10 h-1 rounded-full" style={{ background: 'var(--border)' }} />
+            </div>
+            <div className="px-5 pb-10">
+              <div className="flex gap-1.5 flex-wrap mb-3">
+                {event.tags.map(t => <TagPill key={t} tag={t} />)}
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1 leading-tight">{event.title}</h2>
+              <button
+                className="text-sm font-semibold mb-5 hover:underline flex items-center gap-1" style={{ color: 'var(--accent)' }}
+                onClick={() => { onClose(); setTimeout(() => onClubClick(event.club), 50); }}
+              >
+                {event.club}
+                <span className="text-xs">›</span>
+              </button>
+              <div className="space-y-2.5 mb-5 bg-gray-50 rounded-xl p-3">
+                <div className="flex items-start gap-2.5 text-sm text-gray-700">
+                  <span className="mt-0.5">📅</span>
+                  <div>
+                    <p className="font-medium">{formatDate(event.date)}</p>
+                    {event.time && <p className="text-gray-500 text-xs">{event.time}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 text-sm text-gray-700">
+                  <span className="mt-0.5">📍</span>
+                  <p>{event.location}</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed mb-7">{event.description}</p>
+              <button
+                className="block w-full text-white text-center py-3.5 rounded-2xl font-bold text-sm tracking-wide"
+                style={{ background: 'var(--header-bg)' }}
+                onClick={() => {}}
+              >
+                RSVP / Learn More
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── CLUB PROFILE MODAL ───────────────────────────────────────────────
+    function ClubProfileModal({ clubKey, onClose }) {
+      const club = CLUBS[clubKey];
+      if (!club) return null;
+      return (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
+          <div className="absolute inset-0" style={{ background: 'var(--modal-overlay)' }} />
+          <div
+            className="relative rounded-t-3xl max-h-[80%] overflow-y-auto"
+            style={{ background: 'var(--surface)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-2 sticky top-0 z-10" style={{ background: 'var(--surface)' }}>
+              <div className="w-10 h-1 rounded-full" style={{ background: 'var(--border)' }} />
+            </div>
+            <div className="px-5 pb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: '#002145' }}>
+                  {club.initial}
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 text-base leading-snug">{club.name}</h2>
+                  <p className="text-xs text-gray-400 italic mt-0.5">{club.tagline}</p>
+                </div>
+              </div>
+              <div className="flex gap-1.5 flex-wrap mb-5">
+                {club.tags.map(t => <TagPill key={t} tag={t} />)}
+              </div>
+              <div className="mb-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">What we do</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{club.description}</p>
+              </div>
+              <div className="mb-7">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Who should join</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{club.who}</p>
+              </div>
+              <button
+                className="block w-full text-center py-3.5 rounded-2xl font-bold text-sm"
+                style={{ border: '2px solid var(--text-primary)', color: 'var(--text-primary)' }}
+                onClick={() => {}}
+              >
+                Visit Website
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── HERO CARD ────────────────────────────────────────────────────────
+    function HeroCard({ event, onClick }) {
+      return (
+        <div
+          onClick={() => onClick(event)}
+          className="rounded-2xl overflow-hidden cursor-pointer active:scale-[0.99] transition-transform flex-shrink-0"
+          style={{ width: '85vw', maxWidth: 360, borderLeft: '4px solid #6CC24A' }}
+        >
+          {/* Image with gradient overlay + title on top */}
+          <div className="relative" style={{ height: 160 }}>
+            <img
+              src={`https://picsum.photos/seed/${event.id}/400/200`}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(to bottom, rgba(0,53,91,0.15) 0%, rgba(0,53,91,0.75) 100%)' }}
+            />
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <h2 className="text-white font-bold text-base leading-tight line-clamp-2">{event.title}</h2>
+            </div>
+          </div>
+          {/* Navy bottom info strip */}
+          <div className="px-3 py-2.5" style={{ background: '#002145' }}>
+            <div className="flex gap-1.5 flex-wrap mb-2">
+              {event.tags.map(t => (
+                <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: '#6CC24A', color: '#002145' }}>
+                  {t}
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold truncate" style={{ color: '#6CC24A' }}>{event.club}</p>
+              <p className="text-xs flex-shrink-0" style={{ color: 'rgba(0,168,143,0.65)' }}>{formatShortDate(event.date)}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── TRENDING CARD ────────────────────────────────────────────────────
+    function TrendingCard({ event, onClick }) {
+      return (
+        <div
+          onClick={() => onClick(event)}
+          className="flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+          style={{ width: 160 }}
+        >
+          <img
+            src={`https://picsum.photos/seed/${event.id}/320/200`}
+            alt=""
+            className="w-full object-cover"
+            style={{ height: 100 }}
+          />
+          <div className="p-3">
+            <div className="mb-1.5">
+              <TagPill tag={event.tags[0]} />
+            </div>
+            <p className="font-bold text-gray-900 text-xs leading-snug line-clamp-2 mb-1.5">{event.title}</p>
+            <p className="text-xs text-gray-400">{formatShortDate(event.date)}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── HEADLINE ROW ─────────────────────────────────────────────────────
+    function HeadlineRow({ event, onClick }) {
+      return (
+        <button
+          className="w-full flex items-center gap-2.5 py-2.5 border-b border-gray-50 last:border-0 text-left"
+          style={{ background: 'transparent' }}
+          onClick={() => onClick(event)}
+        >
+          <span className="flex-shrink-0"><TagPill tag={event.tags[0]} /></span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-bold text-gray-900 text-xs leading-snug truncate">{event.title}</span>
+            <span className="block text-xs text-gray-400 mt-0.5">{formatShortDate(event.date)}</span>
+          </span>
+          <img
+            src={`https://picsum.photos/seed/${event.id}/128/128`}
+            alt=""
+            className="flex-shrink-0 object-cover"
+            style={{ width: 52, height: 52, borderRadius: 10 }}
+          />
+        </button>
+      );
+    }
+
+    // ─── SC LOGO ──────────────────────────────────────────────────────────
+    function SCLogo() {
+      return (
+        <div className="flex items-center gap-2">
+          <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid rgba(255,255,255,0.3)' }}>
+            <span style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.5px' }}>CC</span>
+          </div>
+          <span style={{ color: 'white', fontWeight: 700, fontSize: 15, letterSpacing: '-0.2px' }}>Commerce Central</span>
+        </div>
+      );
+    }
+
+    // ─── THEME TOGGLE ─────────────────────────────────────────────────────
+    function ThemeToggle({ theme, onToggle }) {
+      return (
+        <button
+          onClick={onToggle}
+          className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"
+          style={{ background: 'rgba(255,255,255,0.15)', fontSize: 16 }}
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+      );
+    }
+
+    // ─── SECTION NAV STRIP ────────────────────────────────────────────────
+    const NAV_SECTIONS = [
+      { key: 'top',        label: '🔥 Top Stories' },
+      { key: 'hiring',     label: '💼 Hiring' },
+      { key: 'networking', label: '🤝 Networking' },
+      { key: 'casecomps',  label: '📋 Case Comps' },
+      { key: 'deadlines',  label: '📅 Deadlines' },
+      { key: 'tech',       label: '💡 Tech' },
+      { key: 'finance',    label: '📈 Finance' },
+      { key: 'other',      label: '🎓 Other' },
+    ];
+
+    function SectionNavStrip({ activeSection, onSelect }) {
+      return (
+        <div className="flex overflow-x-auto scrollbar-hide px-3 py-1" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+          {NAV_SECTIONS.map(s => {
+            const active = activeSection === s.key;
+            return (
+              <button
+                key={s.key}
+                onClick={() => onSelect(s.key)}
+                className="flex-shrink-0 flex flex-col items-center px-2.5 pt-1.5 pb-2 relative"
+                style={{ color: active ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, fontWeight: active ? 700 : 500, whiteSpace: 'nowrap' }}
+              >
+                {s.label}
+                {active && (
+                  <span className="absolute bottom-0 left-1 right-1 h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ─── FILTER MODAL ─────────────────────────────────────────────────────
+    function FilterModal({ isOpen, onClose, selectedTags, onApply }) {
+      const [pending, setPending] = useState([...selectedTags]);
+      useEffect(() => { if (isOpen) setPending([...selectedTags]); }, [isOpen]);
+      if (!isOpen) return null;
+      const toggle = tag => setPending(p => p.includes(tag) ? p.filter(t => t !== tag) : [...p, tag]);
+      return (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
+          <div className="absolute inset-0" style={{ background: 'var(--modal-overlay)' }} />
+          <div
+            className="relative rounded-t-3xl"
+            style={{ background: 'var(--surface)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ background: 'var(--border)' }} />
+            </div>
+            <div className="flex items-center justify-between px-5 pt-2 pb-3">
+              <span className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Filter Events</span>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-lg" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <div className="px-5 pb-4">
+              <div className="flex flex-wrap gap-2">
+                {ALL_TAGS.map(tag => {
+                  const color = TAG_COLORS[tag] || 'bg-gray-100 text-gray-700';
+                  const active = pending.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggle(tag)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${active ? '' : color}`}
+                      style={active ? { background: '#6CC24A', color: '#002145', border: '2px solid #6CC24A' } : { border: '2px solid transparent' }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="px-5 pb-8 pt-2 flex gap-3">
+              <button
+                onClick={() => setPending([])}
+                className="py-3.5 rounded-2xl font-bold text-sm"
+                style={{ flex: 1, background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => onApply(pending)}
+                className="py-3.5 rounded-2xl font-bold text-sm"
+                style={{ flex: 2, background: '#002145', color: '#6CC24A' }}
+              >
+                Apply Filters{pending.length > 0 ? ` (${pending.length})` : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── TAB: DASHBOARD ───────────────────────────────────────────────────
+    const FEED_SECTION_DEFS = [
+      { key: 'hiring',     label: '💼 Hiring',        tags: ['#hiring', '#internship'] },
+      { key: 'networking', label: '🤝 Networking',    tags: ['#networking', '#gala'] },
+      { key: 'casecomps',  label: '📋 Case Comps',    tags: ['#case-comp', '#consulting'] },
+      { key: 'deadlines',  label: '📅 Deadlines',     tags: ['#club-deadlines'] },
+      { key: 'tech',       label: '💡 Tech',          tags: ['#tech'] },
+      { key: 'finance',    label: '📈 Finance',       tags: ['#finance', '#real-estate'] },
+    ];
+
+    function DashboardTab({ theme, onToggleTheme, profileName, profilePhoto }) {
+      const [search, setSearch] = useState('');
+      const [selectedTags, setSelectedTags] = useState([]);
+      const [filterOpen, setFilterOpen] = useState(false);
+      const [selectedEvent, setSelectedEvent] = useState(null);
+      const [selectedClub, setSelectedClub] = useState(null);
+      const [activeSection, setActiveSection] = useState('top');
+      const sectionRefs = useRef({});
+      const feedRef = useRef(null);
+
+      const filtered = useMemo(() => {
+        return EVENTS
+          .filter(e => {
+            const q = search.toLowerCase();
+            const matchSearch = !search || e.title.toLowerCase().includes(q) || e.club.toLowerCase().includes(q) || e.description.toLowerCase().includes(q);
+            const matchTags = selectedTags.length === 0 || selectedTags.some(t => e.tags.includes(t));
+            return matchSearch && matchTags;
+          })
+          .sort((a, b) => a.date.localeCompare(b.date));
+      }, [search, selectedTags]);
+
+      const heroes   = filtered.slice(0, 4);
+      const trending = filtered.slice(4, 7);
+      const rest     = filtered.slice(7);
+
+      const sections = useMemo(() => {
+        const assignedIds = new Set();
+        const groups = FEED_SECTION_DEFS.map(def => {
+          const events = rest.filter(e => def.tags.some(t => e.tags.includes(t)) && !assignedIds.has(e.id));
+          events.forEach(e => assignedIds.add(e.id));
+          return { key: def.key, label: def.label, events };
+        }).filter(s => s.events.length > 0);
+        const others = rest.filter(e => !assignedIds.has(e.id));
+        if (others.length > 0) groups.push({ key: 'other', label: '🎓 Other', events: others });
+        return groups;
+      }, [rest]);
+
+      // Track active section on scroll
+      useEffect(() => {
+        const feed = feedRef.current;
+        if (!feed) return;
+        const handleScroll = () => {
+          const scrollTop = feed.scrollTop;
+          const keys = ['top', ...FEED_SECTION_DEFS.map(d => d.key), 'other'];
+          let active = 'top';
+          for (const key of keys) {
+            const el = sectionRefs.current[key];
+            if (el && el.offsetTop - 40 <= scrollTop) active = key;
+          }
+          setActiveSection(active);
+        };
+        feed.addEventListener('scroll', handleScroll, { passive: true });
+        return () => feed.removeEventListener('scroll', handleScroll);
+      }, []);
+
+      const scrollToSection = key => {
+        const el = sectionRefs.current[key];
+        const feed = feedRef.current;
+        if (el && feed) {
+          feed.scrollTo({ top: el.offsetTop - 4, behavior: 'smooth' });
+          setActiveSection(key);
+        }
+      };
+
+      return (
+        <div className="flex flex-col h-full relative">
+          {/* Header */}
+          <div className="pt-10 pb-4 px-4 flex-shrink-0" style={{ background: 'var(--header-bg)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <SCLogo />
+                <p className="text-xs mt-1" style={{ color: 'rgba(108,194,74,0.7)' }}>UBC Sauder School of Business</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {profilePhoto
+                  ? <img src={profilePhoto} alt="Profile" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#6CC24A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#002145', fontWeight: 700, fontSize: 12 }}>{(profileName || 'A').charAt(0).toUpperCase()}</div>
+                }
+                <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+              </div>
+            </div>
+            {/* Search + Filter icon */}
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search events, clubs..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                  style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <button
+                onClick={() => setFilterOpen(true)}
+                className="relative w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0"
+                style={{ background: 'rgba(255,255,255,0.15)' }}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                {selectedTags.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#6CC24A' }} />
+                )}
+              </button>
+            </div>
+          </div>
+          {/* Section nav strip */}
+          <SectionNavStrip activeSection={activeSection} onSelect={scrollToSection} />
+          {/* News feed */}
+          <div className="flex-1 overflow-y-auto pb-6" ref={feedRef}>
+            {filtered.length === 0 ? (
+              <div className="text-center py-16 text-sm" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-3xl mb-2">🔍</p>
+                No events match your filters.
+              </div>
+            ) : (
+              <>
+                {/* Top Stories section */}
+                <div ref={el => sectionRefs.current['top'] = el}>
+                  {/* Hero carousel */}
+                  {heroes.length > 0 && (
+                    <div className="pt-4">
+                      <div className="flex gap-3 overflow-x-auto scrollbar-hide hero-carousel pb-1 px-4">
+                        {heroes.map(event => (
+                          <div key={event.id}>
+                            <HeroCard event={event} onClick={setSelectedEvent} />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-center gap-1.5 mt-2.5">
+                        {heroes.map((_, i) => (
+                          <div key={i} className="rounded-full" style={{ width: i === 0 ? 18 : 6, height: 6, background: i === 0 ? '#6CC24A' : '#002145', opacity: i === 0 ? 1 : 0.25 }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Trending strip */}
+                  {trending.length > 0 && (
+                    <div className="mt-5 px-4">
+                      <div className="mb-3">
+                        <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Trending This Week</span>
+                        <div className="h-0.5 w-full mt-1 rounded-full" style={{ background: '#6CC24A' }} />
+                      </div>
+                      <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+                        {trending.map(event => (
+                          <TrendingCard key={event.id} event={event} onClick={setSelectedEvent} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section groups */}
+                {sections.map(section => (
+                  <div key={section.key} className="mt-5 px-4" ref={el => sectionRefs.current[section.key] = el}>
+                    <div className="mb-2">
+                      <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{section.label}</span>
+                      <div className="h-0.5 w-10 mt-1 rounded-full" style={{ background: '#6CC24A' }} />
+                    </div>
+                    <div className="rounded-2xl border shadow-sm px-3 divide-y" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                      {section.events.map(event => (
+                        <HeadlineRow key={event.id} event={event} onClick={setSelectedEvent} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+          <FilterModal
+            isOpen={filterOpen}
+            onClose={() => setFilterOpen(false)}
+            selectedTags={selectedTags}
+            onApply={tags => { setSelectedTags(tags); setFilterOpen(false); }}
+          />
+          {selectedEvent && (
+            <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} onClubClick={club => { setSelectedEvent(null); setSelectedClub(club); }} />
+          )}
+          {selectedClub && (
+            <ClubProfileModal clubKey={selectedClub} onClose={() => setSelectedClub(null)} />
+          )}
+        </div>
+      );
+    }
+
+    // ─── TAB: CALENDAR ────────────────────────────────────────────────────
+    function CalendarTab({ theme, onToggleTheme }) {
+      const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1));
+      const [selectedDay, setSelectedDay] = useState(null);
+      const [selectedEvent, setSelectedEvent] = useState(null);
+      const [selectedClub, setSelectedClub] = useState(null);
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const monthLabel = currentDate.toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+      const firstDow = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      const eventsByDate = useMemo(() => {
+        const map = {};
+        EVENTS.forEach(e => { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); });
+        return map;
+      }, []);
+
+      const ds = day => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const TODAY = '2026-03-17';
+      const dayEvents = selectedDay ? (eventsByDate[selectedDay] || []) : [];
+      const allSorted = [...EVENTS].sort((a, b) => a.date.localeCompare(b.date));
+
+      return (
+        <div className="flex flex-col h-full relative">
+          <div className="pt-10 pb-4 px-4 flex-shrink-0" style={{ background: 'var(--header-bg)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <SCLogo />
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            </div>
+            <h1 className="text-xl font-bold mt-1" style={{ color: 'var(--header-text)' }}>Calendar</h1>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="bg-white mx-4 mt-4 rounded-2xl shadow-sm border border-gray-100 p-4">
+              {/* Month nav */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 text-xl font-light"
+                >‹</button>
+                <span className="font-bold text-gray-900">{monthLabel}</span>
+                <button
+                  onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 text-xl font-light"
+                >›</button>
+              </div>
+              {/* Day headers */}
+              <div className="grid grid-cols-7 mb-1">
+                {['S','M','T','W','T','F','S'].map((d, i) => (
+                  <div key={i} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+                ))}
+              </div>
+              {/* Day grid */}
+              <div className="grid grid-cols-7 gap-y-1">
+                {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const dateStr = ds(day);
+                  const hasEvents = !!eventsByDate[dateStr];
+                  const isSelected = selectedDay === dateStr;
+                  const isToday = dateStr === TODAY;
+                  return (
+                    <button
+                      key={day}
+                      onClick={() => setSelectedDay(isSelected ? null : dateStr)}
+                      className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-colors ${
+                        isSelected ? '' :
+                        isToday ? 'font-bold' :
+                        'hover:bg-gray-50 text-gray-700'
+                      }`}
+                      style={isSelected ? { background: '#002145', color: 'white' } : isToday ? { background: 'var(--today-bg)', color: 'var(--today-text)' } : {}}
+                    >
+                      <span className={`text-sm ${isSelected || isToday ? 'font-bold' : 'font-medium'}`}>{day}</span>
+                      {hasEvents && (
+                        <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#6CC24A]' : 'bg-[#002145]'}`} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Events section */}
+            <div className="px-4 mt-4 pb-6">
+              {selectedDay ? (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                      {(normalizeDate(selectedDay) || new Date()).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </h2>
+                    <button onClick={() => setSelectedDay(null)} className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Clear</button>
+                  </div>
+                  {dayEvents.length === 0 ? (
+                    <div className="text-center text-gray-400 py-10 text-sm bg-white rounded-2xl border border-gray-100">
+                      <p className="text-2xl mb-1">📭</p>
+                      No events on this day.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dayEvents.map(e => <EventCard key={e.id} event={e} onClick={setSelectedEvent} onClubClick={setSelectedClub} />)}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">All Upcoming Events</h2>
+                  <div className="space-y-3">
+                    {allSorted.map(e => <EventCard key={e.id} event={e} onClick={setSelectedEvent} onClubClick={setSelectedClub} />)}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          {selectedEvent && (
+            <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} onClubClick={club => { setSelectedEvent(null); setSelectedClub(club); }} />
+          )}
+          {selectedClub && (
+            <ClubProfileModal clubKey={selectedClub} onClose={() => setSelectedClub(null)} />
+          )}
+        </div>
+      );
+    }
+
+    // ─── TAB: FORUM ───────────────────────────────────────────────────────
+    function ForumTab({ theme, onToggleTheme }) {
+      const [posts, setPosts] = useState(FORUM_POSTS);
+      const [selectedTags, setSelectedTags] = useState([]);
+      const [selectedPost, setSelectedPost] = useState(null);
+      const [upvoted, setUpvoted] = useState({});
+      const [bookmarked, setBookmarked] = useState({});
+      const [followed, setFollowed] = useState({});
+      const [forumSearch, setForumSearch] = useState('');
+      const [specialFilter, setSpecialFilter] = useState(null);
+      const [newPostOpen, setNewPostOpen] = useState(false);
+      const [npTitle, setNpTitle] = useState('');
+      const [npBody, setNpBody] = useState('');
+      const [npTag, setNpTag] = useState(ALL_TAGS[0]);
+      const [npAnon, setNpAnon] = useState(false);
+
+      const toggleTag = tag => setSelectedTags(p => p.includes(tag) ? p.filter(t => t !== tag) : [...p, tag]);
+      const toggleBookmark = (id, e) => { e.stopPropagation(); setBookmarked(b => ({ ...b, [id]: !b[id] })); };
+      const toggleFollow = club => setFollowed(f => ({ ...f, [club]: !f[club] }));
+
+      const trending = useMemo(() => [...FORUM_POSTS].sort((a, b) => b.upvotes - a.upvotes).slice(0, 5), []);
+
+      const filtered = useMemo(() => {
+        if (specialFilter === 'saved') return posts.filter(p => bookmarked[p.id]);
+        if (specialFilter === 'following') return posts.filter(p => p.club && followed[p.club]);
+        const q = forumSearch.toLowerCase();
+        return posts.filter(p => {
+          const matchSearch = !forumSearch || p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q);
+          const matchTags = selectedTags.length === 0 || selectedTags.includes(p.tag);
+          return matchSearch && matchTags;
+        });
+      }, [posts, specialFilter, bookmarked, followed, forumSearch, selectedTags]);
+
+      const submitPost = () => {
+        if (!npTitle.trim()) return;
+        const newPost = {
+          id: Date.now(), title: npTitle.trim(), tag: npTag,
+          author: npAnon ? 'Anonymous' : 'You', timestamp: 'just now',
+          upvotes: 0, comments: 0, club: null,
+          content: npBody.trim(), replies: [],
+        };
+        setPosts(p => [newPost, ...p]);
+        setNpTitle(''); setNpBody(''); setNpTag(ALL_TAGS[0]); setNpAnon(false);
+        setNewPostOpen(false);
+      };
+
+      if (selectedPost) {
+        const uv = upvoted[selectedPost.id];
+        return (
+          <div className="flex flex-col h-full">
+            <div className="pt-10 pb-4 px-4 flex items-center gap-3 flex-shrink-0" style={{ background: 'var(--header-bg)' }}>
+              <button onClick={() => setSelectedPost(null)} className="text-white text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10">‹</button>
+              <h1 className="text-sm font-semibold flex-1 line-clamp-2 leading-snug" style={{ color: 'var(--header-text)' }}>{selectedPost.title}</h1>
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="bg-white mx-4 mt-4 rounded-2xl border border-gray-100 shadow-sm p-4">
+                {/* Club info row */}
+                {selectedPost.club && (
+                  <div className="flex items-center gap-2.5 mb-3 pb-3 border-b border-gray-100">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: '#002145' }}>
+                      {selectedPost.club.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-900 truncate">{selectedPost.club}</p>
+                      <p className="text-xs text-gray-400">Verified Club</p>
+                    </div>
+                    <button
+                      onClick={() => toggleFollow(selectedPost.club)}
+                      className="text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0"
+                      style={followed[selectedPost.club]
+                        ? { background: '#EEF2FF', color: '#002145', border: '1px solid #002145' }
+                        : { background: '#002145', color: '#6CC24A' }}
+                    >
+                      {followed[selectedPost.club] ? '✓ Following' : '+ Follow'}
+                    </button>
+                  </div>
+                )}
+                <div className="flex gap-1.5 flex-wrap mb-3">
+                  <TagPill tag={selectedPost.tag} />
+                </div>
+                <h2 className="font-bold text-gray-900 text-base mb-2 leading-snug">{selectedPost.title}</h2>
+                <p className="text-sm text-gray-700 leading-relaxed mb-4 whitespace-pre-line">{selectedPost.content}</p>
+                <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
+                  <span className="font-medium">{selectedPost.author} · {selectedPost.timestamp}</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      className={`flex items-center gap-1 font-semibold transition-colors ${uv ? '' : 'text-gray-400 hover:text-gray-600'}`}
+                      style={uv ? { color: 'var(--accent)' } : {}}
+                      onClick={() => setUpvoted(u => ({ ...u, [selectedPost.id]: !uv }))}
+                    >
+                      ▲ {selectedPost.upvotes + (uv ? 1 : 0)}
+                    </button>
+                    <span>💬 {selectedPost.comments}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 mt-3 pb-6 space-y-2.5">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{selectedPost.replies.length} Comments</p>
+                {selectedPost.replies.map((reply, i) => (
+                  <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
+                    <p className="text-sm text-gray-700 leading-relaxed mb-3 whitespace-pre-line">{reply.text}</p>
+                    <div className="flex items-center justify-between text-xs text-gray-400">
+                      <span className="font-medium">{reply.author} · {reply.timestamp}</span>
+                      <span className="font-semibold">▲ {reply.upvotes}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex flex-col h-full relative">
+          <div className="pt-10 pb-4 px-4 flex-shrink-0" style={{ background: 'var(--header-bg)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <SCLogo />
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            </div>
+            <h1 className="text-xl font-bold mt-1" style={{ color: 'var(--header-text)' }}>Forum</h1>
+          </div>
+          <div className="bg-white border-b border-gray-100 pt-2.5 pb-1 flex-shrink-0">
+            <div className="relative px-4 mb-2">
+              <span className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+              <input
+                type="text"
+                placeholder="Search discussions..."
+                value={forumSearch}
+                onChange={e => setForumSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-gray-100 text-sm focus:outline-none"
+              />
+            </div>
+            {/* Trending row */}
+            <div className="px-4 mb-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Trending now</p>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {trending.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPost(p)}
+                    className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
+                    style={{ background: 'rgba(108,194,74,0.15)', color: '#002145' }}
+                  >
+                    ▲{p.upvotes} {p.title.length > 28 ? p.title.slice(0, 28) + '…' : p.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Filter strip: Saved + Following + tag pills */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-2">
+              {['saved', 'following'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setSpecialFilter(specialFilter === f ? null : f)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold capitalize"
+                  style={specialFilter === f
+                    ? { background: '#002145', color: '#6CC24A' }
+                    : { background: '#F3F4F6', color: '#6B7280' }}
+                >
+                  {f === 'saved' ? '🔖 Saved' : '⭐ Following'}
+                </button>
+              ))}
+              {ALL_TAGS.map(tag => {
+                const active = selectedTags.includes(tag);
+                const color = TAG_COLORS[tag] || 'bg-gray-100 text-gray-700';
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => { setSpecialFilter(null); toggleTag(tag); }}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${active ? '' : color}`}
+                    style={active ? { background: '#002145', color: '#6CC24A' } : {}}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {/* Posts list */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 pb-20">
+            {filtered.length === 0 ? (
+              <div className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-3xl mb-2">{specialFilter === 'saved' ? '🔖' : '🔍'}</p>
+                {specialFilter === 'saved' ? 'No saved posts yet.' : specialFilter === 'following' ? 'Follow a club to see their posts here.' : 'No posts match your search.'}
+              </div>
+            ) : filtered.map(post => (
+              <button
+                key={post.id}
+                className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left active:scale-[0.98] transition-transform relative"
+                onClick={() => setSelectedPost(post)}
+              >
+                {/* Bookmark icon */}
+                <button
+                  className="absolute top-3 right-3 text-lg z-10"
+                  style={{ color: bookmarked[post.id] ? '#6CC24A' : '#D1D5DB' }}
+                  onClick={e => toggleBookmark(post.id, e)}
+                >
+                  🔖
+                </button>
+                <div className="flex gap-1.5 mb-2 pr-8">
+                  <TagPill tag={post.tag} />
+                </div>
+                <h3 className="font-bold text-gray-900 text-sm mb-1 leading-snug pr-6">{post.title}</h3>
+                <p className="text-xs text-gray-500 line-clamp-2 mb-3">{post.content}</p>
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span className="font-medium">{post.author} · {post.timestamp}</span>
+                  <div className="flex items-center gap-3 font-semibold">
+                    <button
+                      style={upvoted[post.id] ? { color: '#6CC24A' } : { color: '#9CA3AF' }}
+                      onClick={e => { e.stopPropagation(); setUpvoted(u => ({ ...u, [post.id]: !u[post.id] })); }}
+                    >▲ {post.upvotes + (upvoted[post.id] ? 1 : 0)}</button>
+                    <span>💬 {post.comments}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          {/* FAB */}
+          <button
+            onClick={() => setNewPostOpen(true)}
+            className="absolute bottom-4 right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-40"
+            style={{ background: '#6CC24A' }}
+          >
+            <span style={{ color: 'white', fontSize: 28, fontWeight: 300, lineHeight: 1, marginTop: -2 }}>+</span>
+          </button>
+          {/* New Post modal */}
+          {newPostOpen && (
+            <div className="absolute inset-0 z-50 flex flex-col justify-end" style={{ background: 'var(--modal-overlay)' }} onClick={() => setNewPostOpen(false)}>
+              <div className="rounded-t-3xl p-5" style={{ background: 'var(--surface)' }} onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>New Post</h2>
+                  <button onClick={() => setNewPostOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-lg" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>✕</button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Post title..."
+                  value={npTitle}
+                  onChange={e => setNpTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm mb-3 focus:outline-none"
+                  style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                />
+                <textarea
+                  placeholder="Share your thoughts..."
+                  value={npBody}
+                  onChange={e => setNpBody(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm mb-3 focus:outline-none resize-none"
+                  style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                />
+                {/* Tag picker */}
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
+                  {ALL_TAGS.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setNpTag(tag)}
+                      className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold"
+                      style={npTag === tag
+                        ? { background: '#002145', color: '#6CC24A' }
+                        : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                {/* Anonymity toggle */}
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Post anonymously</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Your name won't be shown</p>
+                  </div>
+                  <button
+                    onClick={() => setNpAnon(a => !a)}
+                    className="relative w-12 h-6 rounded-full transition-colors flex-shrink-0"
+                    style={{ background: npAnon ? '#6CC24A' : '#D1D5DB' }}
+                  >
+                    <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all" style={{ left: npAnon ? '26px' : '2px' }} />
+                  </button>
+                </div>
+                <button
+                  onClick={submitPost}
+                  className="w-full py-3 rounded-2xl font-bold text-sm"
+                  style={{ background: '#002145', color: '#6CC24A' }}
+                >
+                  Submit Post
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── TAB: PROFILE ─────────────────────────────────────────────────────
+    function ProfileTab({ theme, onToggleTheme, profileName, setProfileName, profilePhoto, setProfilePhoto, profileYear, setProfileYear, profileSpec, setProfileSpec }) {
+      const [profileTags, setProfileTags] = useState(['#finance', '#consulting', '#hiring']);
+      const [statModal, setStatModal] = useState(null);
+      const [langOpen, setLangOpen] = useState(false);
+      const [language, setLanguage] = useState('English');
+      const [editOpen, setEditOpen] = useState(false);
+      const [editName, setEditName] = useState(profileName);
+      const [editYear, setEditYear] = useState(profileYear);
+      const [editSpec, setEditSpec] = useState(profileSpec);
+      const fileInputRef = useRef(null);
+      const [notifOpen, setNotifOpen] = useState(false);
+      const [notifs, setNotifs] = useState({ tags: true, clubApps: true, reminders: false, replies: true, trending: false });
+      const [digestOpen, setDigestOpen] = useState(false);
+      const [digestEnabled, setDigestEnabled] = useState(true);
+      const [digestDay, setDigestDay] = useState('Monday');
+      const [feedbackOpen, setFeedbackOpen] = useState(false);
+      const [feedbackText, setFeedbackText] = useState('');
+      const [feedbackCat, setFeedbackCat] = useState(null);
+      const [toast, setToast] = useState(false);
+
+      const toggleTag = tag => setProfileTags(p => p.includes(tag) ? p.filter(t => t !== tag) : [...p, tag]);
+      const toggleNotif = key => setNotifs(n => ({ ...n, [key]: !n[key] }));
+      const submitFeedback = () => { setFeedbackOpen(false); setFeedbackText(''); setFeedbackCat(null); setToast(true); setTimeout(() => setToast(false), 3000); };
+
+      const LANGUAGES = ['English','Français','中文','Español','日本語','한국어','Deutsch','Italiano','Português','العربية'];
+      const YEARS = ['Year 1','Year 2','Year 3','Year 4'];
+      const SPECS = ['Accounting','Finance','Marketing','Management','Real Estate','Operations'];
+
+      const openEdit = () => { setEditName(profileName); setEditYear(profileYear); setEditSpec(profileSpec); setEditOpen(true); };
+      const saveEdit = () => { if (editName.trim()) setProfileName(editName.trim()); setProfileYear(editYear); setProfileSpec(editSpec); setEditOpen(false); };
+      const handlePhotoUpload = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => setProfilePhoto(ev.target.result);
+        reader.readAsDataURL(file);
+      };
+
+      const Avatar = ({ size = 56 }) => profilePhoto
+        ? <img src={profilePhoto} alt="Profile" style={{ width: size, height: size, borderRadius: size > 40 ? 16 : '50%', objectFit: 'cover', flexShrink: 0 }} />
+        : <div style={{ width: size, height: size, borderRadius: size > 40 ? 16 : '50%', background: '#6CC24A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#002145', fontWeight: 700, fontSize: size * 0.4, flexShrink: 0 }}>{(profileName || 'A').charAt(0).toUpperCase()}</div>;
+
+      const BottomSheet = ({ open, onClose, title, children }) => !open ? null : (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end" style={{ background: 'var(--modal-overlay)' }} onClick={onClose}>
+          <div className="rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto" style={{ background: 'var(--surface)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-lg" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            {children}
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="flex flex-col h-full relative">
+          <div className="pt-10 pb-6 px-4 flex-shrink-0" style={{ background: 'var(--header-bg)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <SCLogo />
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            </div>
+            <div className="flex items-center gap-4">
+              <Avatar size={56} />
+              <div>
+                <h1 className="text-white text-lg font-bold leading-tight">{profileName}</h1>
+                <p className="text-[#6CC24A] text-sm font-medium">{profileYear} · {profileSpec}</p>
+                <p className="text-blue-300 text-xs mt-0.5">UBC Sauder School of Business</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {/* Stats */}
+            <div className="mx-4 mt-4 grid grid-cols-3 gap-2.5">
+              {[
+                { label: "Events RSVP'd", value: '4', modal: 'events' },
+                { label: 'Forum Posts', value: '2', modal: 'posts' },
+                { label: 'Clubs Joined', value: '3', modal: 'clubs' },
+              ].map(({ label, value, modal }) => (
+                <button key={label} onClick={() => setStatModal(modal)} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 text-center active:scale-95 transition-transform">
+                  <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{value}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-tight">{label}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Tag preferences */}
+            <div className="bg-white mx-4 mt-3 rounded-2xl border border-gray-100 shadow-sm p-4">
+              <h2 className="font-bold text-gray-900 text-sm mb-0.5">My Interests</h2>
+              <p className="text-xs text-gray-500 mb-3">Your selected tags prioritize what you see in the dashboard.</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_TAGS.map(tag => {
+                  const color = TAG_COLORS[tag] || 'bg-gray-100 text-gray-700';
+                  const active = profileTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all ${active ? '' : `${color} border-transparent`}`}
+                      style={active ? { background: '#6CC24A', color: '#002145', borderColor: '#6CC24A' } : {}}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Settings items */}
+            <div className="bg-white mx-4 mt-3 rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 mb-6">
+              {[
+                { icon: '🔔', label: 'Notifications', desc: 'Alerts for events matching your tags', action: () => setNotifOpen(true) },
+                { icon: '📧', label: 'Email Digest', desc: 'Weekly summary of upcoming events', action: () => setDigestOpen(true) },
+                { icon: '✏️', label: 'Edit Profile', desc: 'Update your name, year, or specialization', action: openEdit },
+                { icon: '🌐', label: 'Language', desc: language, action: () => setLangOpen(true) },
+                { icon: '🎓', label: 'My Clubs', desc: 'View and manage your club memberships', action: () => setStatModal('clubs') },
+                { icon: '❓', label: 'Help & Feedback', desc: 'Report issues or share ideas', action: () => setFeedbackOpen(true) },
+              ].map(({ icon, label, desc, action }) => (
+                <button key={label} onClick={action || undefined} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors">
+                  <span className="text-xl">{icon}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">{label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                  </div>
+                  <span className="text-gray-300 text-lg">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Events modal */}
+          <BottomSheet open={statModal === 'events'} onClose={() => setStatModal(null)} title="Events RSVP'd">
+            <div className="space-y-3">
+              {EVENTS.slice(0, 4).map(e => (
+                <div key={e.id} className="flex gap-3 items-start p-3 rounded-2xl" style={{ background: 'var(--input-bg)' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'rgba(0,33,69,0.08)' }}>{e.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{e.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{e.date} · {e.club}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </BottomSheet>
+
+          {/* Posts modal */}
+          <BottomSheet open={statModal === 'posts'} onClose={() => setStatModal(null)} title="My Forum Posts">
+            <div className="space-y-3">
+              {[
+                { title: 'Is Finance Club worth it in first year?', tag: '#finance', upvotes: 54, timestamp: '4d ago' },
+                { title: 'Anyone going to the Deloitte info session?', tag: '#hiring', upvotes: 28, timestamp: '5h ago' },
+              ].map((post, i) => (
+                <div key={i} className="p-3 rounded-2xl" style={{ background: 'var(--input-bg)' }}>
+                  <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>{post.tag}</p>
+                  <p className="text-sm font-semibold text-gray-900 leading-tight">{post.title}</p>
+                  <p className="text-xs text-gray-400 mt-1">▲ {post.upvotes} · {post.timestamp}</p>
+                </div>
+              ))}
+            </div>
+          </BottomSheet>
+
+          {/* Clubs modal */}
+          <BottomSheet open={statModal === 'clubs'} onClose={() => setStatModal(null)} title="Clubs Joined">
+            <div className="space-y-3">
+              {['UBC Finance Club', 'UBC Consulting Club', 'Sauder Marketing & Entrepreneurship Club'].map(club => (
+                <div key={club} className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: 'var(--input-bg)' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: '#002145' }}>
+                    {(CLUBS[club]?.initial || club.slice(0, 2)).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{club}</p>
+                    <p className="text-xs" style={{ color: 'var(--accent)' }}>Member</p>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(108,194,74,0.15)', color: '#002145' }}>Following</span>
+                </div>
+              ))}
+            </div>
+          </BottomSheet>
+
+          {/* Language modal */}
+          <BottomSheet open={langOpen} onClose={() => setLangOpen(false)} title="Language">
+            <div className="space-y-1">
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang}
+                  onClick={() => { setLanguage(lang); setLangOpen(false); }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  {lang}
+                  {language === lang && <span className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: '#6CC24A' }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          </BottomSheet>
+
+          {/* Toast */}
+          {toast && (
+            <div className="absolute top-16 left-4 right-4 z-50 py-3 px-4 rounded-2xl text-sm font-semibold text-center" style={{ background: '#6CC24A', color: '#002145' }}>
+              Thanks for your feedback! 🎉
+            </div>
+          )}
+
+          {/* Notifications modal */}
+          <BottomSheet open={notifOpen} onClose={() => setNotifOpen(false)} title="Notifications">
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Event Alerts</p>
+                <div className="space-y-3">
+                  {[
+                    { key: 'tags', label: 'Events matching my tags' },
+                    { key: 'clubApps', label: 'New club applications open' },
+                    { key: 'reminders', label: 'Event reminders (1 day before)' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</span>
+                      <button onClick={() => toggleNotif(key)} className="relative w-12 h-6 rounded-full flex-shrink-0 transition-colors" style={{ background: notifs[key] ? '#6CC24A' : '#D1D5DB' }}>
+                        <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all" style={{ left: notifs[key] ? '26px' : '2px' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="pt-3 border-t border-gray-100">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Forum Alerts</p>
+                <div className="space-y-3">
+                  {[
+                    { key: 'replies', label: 'Replies to my posts' },
+                    { key: 'trending', label: 'Trending posts in my threads' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</span>
+                      <button onClick={() => toggleNotif(key)} className="relative w-12 h-6 rounded-full flex-shrink-0 transition-colors" style={{ background: notifs[key] ? '#6CC24A' : '#D1D5DB' }}>
+                        <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all" style={{ left: notifs[key] ? '26px' : '2px' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </BottomSheet>
+
+          {/* Email Digest modal */}
+          <BottomSheet open={digestOpen} onClose={() => setDigestOpen(false)} title="Email Digest">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Enable weekly email digest</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Get a weekly summary of events and news</p>
+                </div>
+                <button onClick={() => setDigestEnabled(d => !d)} className="relative w-12 h-6 rounded-full flex-shrink-0 transition-colors" style={{ background: digestEnabled ? '#6CC24A' : '#D1D5DB' }}>
+                  <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all" style={{ left: digestEnabled ? '26px' : '2px' }} />
+                </button>
+              </div>
+              {digestEnabled && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Send every</label>
+                    <select value={digestDay} onChange={e => setDigestDay(e.target.value)} className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+                      {['Monday','Wednesday','Friday'].map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div className="rounded-2xl p-4" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                    <p className="text-xs font-bold mb-2 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Preview</p>
+                    <p className="text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>This week at Commerce Central</p>
+                    {EVENTS.slice(0, 3).map(e => (
+                      <p key={e.id} className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>• {e.title} — {e.date}</p>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </BottomSheet>
+
+          {/* Help & Feedback modal */}
+          <BottomSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} title="Help & Feedback">
+            <div>
+              <div className="flex gap-2 mb-3">
+                {[['🐛','Bug Report'],['💡','Feature Idea'],['❓','Question']].map(([emoji, cat]) => (
+                  <button
+                    key={cat}
+                    onClick={() => setFeedbackCat(feedbackCat === cat ? null : cat)}
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold"
+                    style={feedbackCat === cat ? { background: '#002145', color: '#6CC24A' } : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                  >
+                    {emoji} {cat}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                placeholder="Describe your issue or idea..."
+                value={feedbackText}
+                onChange={e => setFeedbackText(e.target.value)}
+                rows={5}
+                className="w-full px-4 py-2.5 rounded-xl text-sm mb-4 focus:outline-none resize-none"
+                style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+              />
+              <button onClick={submitFeedback} className="w-full py-3 rounded-2xl font-bold text-sm" style={{ background: '#002145', color: '#6CC24A' }}>
+                Submit Feedback
+              </button>
+            </div>
+          </BottomSheet>
+
+          {/* Edit Profile modal */}
+          {editOpen && (
+            <div className="absolute inset-0 z-50 flex flex-col justify-end" style={{ background: 'var(--modal-overlay)' }} onClick={() => setEditOpen(false)}>
+              <div className="rounded-t-3xl p-5" style={{ background: 'var(--surface)' }} onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Edit Profile</h2>
+                  <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-lg" style={{ background: 'var(--border)', color: 'var(--text-muted)' }}>✕</button>
+                </div>
+                {/* Photo upload */}
+                <div className="flex justify-center mb-5">
+                  <div className="relative">
+                    {profilePhoto
+                      ? <img src={profilePhoto} alt="Profile" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} />
+                      : <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#6CC24A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#002145', fontWeight: 700, fontSize: 32 }}>{(profileName || 'A').charAt(0)}</div>
+                    }
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center font-bold shadow-md"
+                      style={{ background: '#6CC24A', color: '#002145', fontSize: 18 }}
+                    >+</button>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Name</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Year</label>
+                  <select
+                    value={editYear}
+                    onChange={e => setEditYear(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                  >
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div className="mb-5">
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Specialization</label>
+                  <select
+                    value={editSpec}
+                    onChange={e => setEditSpec(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                  >
+                    {SPECS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <button
+                  onClick={saveEdit}
+                  className="w-full py-3 rounded-2xl font-bold text-sm"
+                  style={{ background: '#002145', color: '#6CC24A' }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── BOTTOM NAV ───────────────────────────────────────────────────────
+    function BottomNav({ activeTab, onTabChange, theme }) {
+      const tabs = [
+        { id: 'dashboard', icon: '🏠', label: 'Home' },
+        { id: 'calendar',  icon: '📅', label: 'Calendar' },
+        { id: 'forum',     icon: '💬', label: 'Forum' },
+        { id: 'profile',   icon: '👤', label: 'Profile' },
+      ];
+      return (
+        <div className="flex-shrink-0 flex justify-around items-center h-16 safe-bottom" style={{ background: 'var(--nav-bg)', borderTop: '1px solid var(--border)' }}>
+          {tabs.map(tab => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className="flex flex-col items-center gap-0.5 py-2 px-4 relative"
+              >
+                <span className={`text-xl transition-transform ${active ? 'scale-110' : 'scale-100'}`}>{tab.icon}</span>
+                <span className="text-[10px] font-semibold transition-colors" style={{ color: active ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {tab.label}
+                </span>
+                {active && (
+                  <span className="absolute bottom-1 w-5 h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ─── SETUP SCREEN ─────────────────────────────────────────────────────
+    function SetupScreen({ onDone }) {
+      const [selected, setSelected] = useState(null);
+      const [step, setStep] = useState(1);
+      const [clubName, setClubName] = useState('');
+      const [clubCategory, setClubCategory] = useState(ALL_TAGS[0]);
+      const [clubDesc, setClubDesc] = useState('');
+      const [submitted, setSubmitted] = useState(false);
+
+      const handleStart = () => {
+        if (!selected) return;
+        if (selected === 'student') { try { localStorage.setItem('cc-setup-done', '1'); } catch {} onDone(); }
+        else setStep(2);
+      };
+      const handleApply = () => {
+        setSubmitted(true);
+        setTimeout(() => { try { localStorage.setItem('cc-setup-done', '1'); } catch {} onDone(); }, 2000);
+      };
+
+      if (step === 2) return (
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 430, height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--surface)', padding: '0 24px', boxSizing: 'border-box' }}>
+            <div style={{ flex: 1, overflowY: 'auto', paddingTop: 60, paddingBottom: 40 }}>
+              <button onClick={() => setStep(1)} style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>‹ Back</button>
+              <h2 style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Club details</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>Tell us about your club so we can verify you.</p>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Club Name</label>
+                <input type="text" placeholder="e.g. UBC Finance Club" value={clubName} onChange={e => setClubName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 16px', borderRadius: 12, fontSize: 14, background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxSizing: 'border-box', outline: 'none' }} />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Category</label>
+                <select value={clubCategory} onChange={e => setClubCategory(e.target.value)}
+                  style={{ width: '100%', padding: '10px 16px', borderRadius: 12, fontSize: 14, background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxSizing: 'border-box', outline: 'none' }}>
+                  {ALL_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Description</label>
+                <textarea placeholder="Describe your club..." value={clubDesc} onChange={e => setClubDesc(e.target.value)} rows={4}
+                  style={{ width: '100%', padding: '10px 16px', borderRadius: 12, fontSize: 14, background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxSizing: 'border-box', resize: 'none', outline: 'none' }} />
+              </div>
+              {submitted
+                ? <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(108,194,74,0.15)', borderRadius: 16, color: '#002145', fontWeight: 600, fontSize: 14 }}>Application submitted! ✅</div>
+                : <button onClick={handleApply} style={{ width: '100%', padding: '14px', borderRadius: 16, background: '#002145', color: '#6CC24A', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', boxSizing: 'border-box' }}>Apply for Verification</button>
+              }
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 430, height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', background: 'var(--surface)', boxSizing: 'border-box' }}>
+            <div style={{ marginBottom: 8 }}><SCLogo /></div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 48, textAlign: 'center' }}>Your Sauder hub, all in one place</p>
+            <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 17, marginBottom: 20, textAlign: 'center' }}>How are you joining Commerce Central?</p>
+            <div style={{ display: 'flex', gap: 12, width: '100%', marginBottom: 32 }}>
+              {[
+                { id: 'student', emoji: '🎓', label: 'Student', sub: "I'm a Sauder undergraduate" },
+                { id: 'club', emoji: '🏛', label: 'Club / Org', sub: 'I represent a Sauder club' },
+              ].map(({ id, emoji, label, sub }) => (
+                <button key={id} onClick={() => setSelected(id)} style={{
+                  flex: 1, padding: '20px 12px', borderRadius: 20, background: 'var(--surface)',
+                  border: `2px solid ${selected === id ? '#6CC24A' : 'var(--border)'}`,
+                  boxShadow: selected === id ? '0 0 0 3px rgba(108,194,74,0.15)' : 'none',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer',
+                }}>
+                  <span style={{ fontSize: 32 }}>{emoji}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>{label}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', lineHeight: 1.3 }}>{sub}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={handleStart} style={{ width: '100%', padding: '14px', borderRadius: 16, background: selected ? '#002145' : '#E5E7EB', color: selected ? '#6CC24A' : '#9CA3AF', fontWeight: 700, fontSize: 15, border: 'none', cursor: selected ? 'pointer' : 'default', boxSizing: 'border-box' }}>
+              Get Started →
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── DATA LOADER ──────────────────────────────────────────────────────
+    function DataLoader({ children }) {
+      const [status, setStatus] = useState('loading');
+
+      useEffect(() => {
+        Promise.all([
+          fetch(SCRIPT_URL + '?sheet=clubs').then(r => r.json()),
+          fetch(SCRIPT_URL + '?sheet=Events').then(r => r.json()),
+        ])
+          .then(([clubRows, eventRows]) => {
+            const clubs = {};
+            clubRows.forEach(row => {
+              const name = row.name;
+              if (!name) return;
+              clubs[name] = {
+                name,
+                tagline:     row.tagline     || '',
+                description: row.description || '',
+                who:         row.who         || '',
+                website:     row.website     || '#',
+                tags:        (row.tags || '').split(',').map(t => t.trim()).filter(Boolean),
+                initial:     row.initial     || name.slice(0, 2).toUpperCase(),
+              };
+            });
+            CLUBS = clubs;
+            EVENTS = eventRows.map((row, i) => ({
+              id:          parseInt(row.id) || (i + 1),
+              title:       row.title       || '',
+              club:        row.club        || '',
+              tags:        (row.tags || '').split(',').map(t => t.trim()).filter(Boolean),
+              date:        row.date        || '',
+              time:        row.time        || '',
+              location:    row.location    || '',
+              description: row.description || '',
+              link:        row.link        || '#',
+            }));
+            setStatus('ready');
+          })
+          .catch((err) => {
+            console.error('[data fetch error]', err);
+            CLUBS  = {};
+            EVENTS = [];
+            setStatus('error');
+          });
+      }, []);
+
+      if (status === 'loading') {
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: 'var(--bg)' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: 0 }}>Loading...</p>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <>
+          {status === 'error' && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, background: '#FEF2F2', color: '#B91C1C', textAlign: 'center', padding: '8px 16px', fontSize: 13, zIndex: 9999 }}>
+              Could not load live data — content may be unavailable.
+            </div>
+          )}
+          {children}
+        </>
+      );
+    }
+
+    // ─── APP ROOT ─────────────────────────────────────────────────────────
+    function App() {
+      const [setupDone, setSetupDone] = useState(() => { try { return !!localStorage.getItem('cc-setup-done'); } catch { return false; } });
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [theme, setTheme] = useState(() => {
+        try { return localStorage.getItem('sc-theme') || 'light'; } catch { return 'light'; }
+      });
+      const [profileName, setProfileName] = useState('Alex Chen');
+      const [profilePhoto, setProfilePhoto] = useState(null);
+      const [profileYear, setProfileYear] = useState('Year 2');
+      const [profileSpec, setProfileSpec] = useState('Finance');
+
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        try { localStorage.setItem('sc-theme', theme); } catch {}
+      }, [theme]);
+
+      const toggleTheme = useCallback(() => setTheme(t => t === 'light' ? 'dark' : 'light'), []);
+
+      const profileProps = { profileName, setProfileName, profilePhoto, setProfilePhoto, profileYear, setProfileYear, profileSpec, setProfileSpec };
+
+      if (!setupDone) return <SetupScreen onDone={() => setSetupDone(true)} />;
+
+      return (
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 430, height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+              {activeTab === 'dashboard' && <DashboardTab theme={theme} onToggleTheme={toggleTheme} profileName={profileName} profilePhoto={profilePhoto} />}
+              {activeTab === 'calendar'  && <CalendarTab theme={theme} onToggleTheme={toggleTheme} />}
+              {activeTab === 'forum'     && <ForumTab theme={theme} onToggleTheme={toggleTheme} />}
+              {activeTab === 'profile'   && <ProfileTab theme={theme} onToggleTheme={toggleTheme} {...profileProps} />}
+            </div>
+            <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<DataLoader><App /></DataLoader>);
+  </script>
+</body>
+</html>
