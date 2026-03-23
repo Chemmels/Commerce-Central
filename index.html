@@ -1452,14 +1452,25 @@
 
       const eventsByDate = useMemo(() => {
         const map = {};
-        EVENTS.forEach(e => { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); });
+        EVENTS.forEach(e => {
+          const d = normalizeDate(e.date);
+          if (!d) return;
+          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          if (!map[key]) map[key] = [];
+          map[key].push(e);
+        });
         return map;
       }, []);
 
       const ds = day => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const TODAY = '2026-03-17';
       const dayEvents = selectedDay ? (eventsByDate[selectedDay] || []) : [];
-      const allSorted = [...EVENTS].sort((a, b) => a.date.localeCompare(b.date));
+      const monthEvents = useMemo(() =>
+        EVENTS.filter(e => {
+          const d = normalizeDate(e.date);
+          return d && d.getFullYear() === year && d.getMonth() === month;
+        }).sort((a, b) => a.date.localeCompare(b.date))
+      , [year, month]);
 
       return (
         <div className="flex flex-col h-full relative">
@@ -1543,9 +1554,14 @@
                 </>
               ) : (
                 <>
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">All Upcoming Events</h2>
+                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">{monthLabel} Events</h2>
                   <div className="space-y-3">
-                    {allSorted.map(e => <EventCard key={e.id} event={e} onClick={setSelectedEvent} onClubClick={setSelectedClub} />)}
+                    {monthEvents.length === 0 ? (
+                      <div className="text-center text-gray-400 py-10 text-sm bg-white rounded-2xl border border-gray-100">
+                        <p className="text-2xl mb-1">📭</p>
+                        No events this month.
+                      </div>
+                    ) : monthEvents.map(e => <EventCard key={e.id} event={e} onClick={setSelectedEvent} onClubClick={setSelectedClub} />)}
                   </div>
                 </>
               )}
@@ -1859,8 +1875,6 @@
     function ProfileTab({ theme, onToggleTheme, profileName, setProfileName, profilePhoto, setProfilePhoto, profileYear, setProfileYear, profileSpec, setProfileSpec }) {
       const [profileTags, setProfileTags] = useState(['#finance', '#consulting', '#hiring']);
       const [statModal, setStatModal] = useState(null);
-      const [langOpen, setLangOpen] = useState(false);
-      const [language, setLanguage] = useState('English');
       const [editOpen, setEditOpen] = useState(false);
       const [editName, setEditName] = useState(profileName);
       const [editYear, setEditYear] = useState(profileYear);
@@ -1880,7 +1894,6 @@
       const toggleNotif = key => setNotifs(n => ({ ...n, [key]: !n[key] }));
       const submitFeedback = () => { setFeedbackOpen(false); setFeedbackText(''); setFeedbackCat(null); setToast(true); setTimeout(() => setToast(false), 3000); };
 
-      const LANGUAGES = ['English','Français','中文','Español','日本語','한국어','Deutsch','Italiano','Português','العربية'];
       const YEARS = ['Year 1','Year 2','Year 3','Year 4'];
       const SPECS = ['Accounting','Finance','Marketing','Management','Real Estate','Operations'];
 
@@ -1970,7 +1983,6 @@
                 { icon: '🔔', label: 'Notifications', desc: 'Alerts for events matching your tags', action: () => setNotifOpen(true) },
                 { icon: '📧', label: 'Email Digest', desc: 'Weekly summary of upcoming events', action: () => setDigestOpen(true) },
                 { icon: '✏️', label: 'Edit Profile', desc: 'Update your name, year, or specialization', action: openEdit },
-                { icon: '🌐', label: 'Language', desc: language, action: () => setLangOpen(true) },
                 { icon: '🎓', label: 'My Clubs', desc: 'View and manage your club memberships', action: () => setStatModal('clubs') },
                 { icon: '❓', label: 'Help & Feedback', desc: 'Report issues or share ideas', action: () => setFeedbackOpen(true) },
               ].map(({ icon, label, desc, action }) => (
@@ -2031,23 +2043,6 @@
                   </div>
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(108,194,74,0.15)', color: '#002145' }}>Following</span>
                 </div>
-              ))}
-            </div>
-          </BottomSheet>
-
-          {/* Language modal */}
-          <BottomSheet open={langOpen} onClose={() => setLangOpen(false)} title="Language">
-            <div className="space-y-1">
-              {LANGUAGES.map(lang => (
-                <button
-                  key={lang}
-                  onClick={() => { setLanguage(lang); setLangOpen(false); }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  {lang}
-                  {language === lang && <span className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: '#6CC24A' }}>✓</span>}
-                </button>
               ))}
             </div>
           </BottomSheet>
@@ -2229,30 +2224,97 @@
     }
 
     // ─── BOTTOM NAV ───────────────────────────────────────────────────────
-    function BottomNav({ activeTab, onTabChange, theme }) {
+    const NAV_ICONS = {
+      dashboard: {
+        filled: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+          </svg>
+        ),
+        outline: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12l9-9 9 9v8a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1z"/>
+          </svg>
+        ),
+      },
+      calendar: {
+        filled: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M20 3h-1V1h-2v2H7V1H5v2H4C2.9 3 2 3.9 2 5v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/>
+          </svg>
+        ),
+        outline: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        ),
+      },
+      forum: {
+        filled: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+          </svg>
+        ),
+        outline: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        ),
+      },
+      profile: {
+        filled: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+          </svg>
+        ),
+        outline: (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        ),
+      },
+    };
+
+    function BottomNav({ activeTab, onTabChange }) {
       const tabs = [
-        { id: 'dashboard', icon: '🏠', label: 'Home' },
-        { id: 'calendar',  icon: '📅', label: 'Calendar' },
-        { id: 'forum',     icon: '💬', label: 'Forum' },
-        { id: 'profile',   icon: '👤', label: 'Profile' },
+        { id: 'dashboard' },
+        { id: 'calendar' },
+        { id: 'forum' },
+        { id: 'profile' },
       ];
       return (
-        <div className="flex-shrink-0 flex justify-around items-center h-16 safe-bottom" style={{ background: 'var(--nav-bg)', borderTop: '1px solid var(--border)' }}>
+        <div
+          className="flex-shrink-0 flex justify-around items-center"
+          style={{
+            height: 68,
+            background: 'var(--surface)',
+            borderTop: '1.5px solid var(--border)',
+            boxShadow: '0 -1px 8px rgba(0,0,0,0.06)',
+          }}
+        >
           {tabs.map(tab => {
             const active = activeTab === tab.id;
+            const icons = NAV_ICONS[tab.id];
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className="flex flex-col items-center gap-0.5 py-2 px-4 relative"
+                className="flex items-center justify-center"
+                style={{
+                  flex: 1,
+                  height: '100%',
+                  color: active ? 'var(--accent)' : '#9CA3AF',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
               >
-                <span className={`text-xl transition-transform ${active ? 'scale-110' : 'scale-100'}`}>{tab.icon}</span>
-                <span className="text-[10px] font-semibold transition-colors" style={{ color: active ? 'var(--accent)' : 'var(--text-muted)' }}>
-                  {tab.label}
-                </span>
-                {active && (
-                  <span className="absolute bottom-1 w-5 h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
-                )}
+                {active ? icons.filled : icons.outline}
               </button>
             );
           })}
@@ -2444,7 +2506,7 @@
               {activeTab === 'forum'     && <ForumTab theme={theme} onToggleTheme={toggleTheme} />}
               {activeTab === 'profile'   && <ProfileTab theme={theme} onToggleTheme={toggleTheme} {...profileProps} />}
             </div>
-            <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
+            <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         </div>
       );
