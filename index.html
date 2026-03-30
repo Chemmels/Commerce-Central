@@ -33,7 +33,7 @@
       --accent: #6CC24A;
       --border: #E5E7EB;
       --input-bg: #FFFFFF;
-      --today-bg: #EEF2FF;
+      --today-bg: #E8EEF5;
       --today-text: #002145;
       --modal-overlay: rgba(0,0,0,0.5);
     }
@@ -122,6 +122,7 @@
         upvotes: 42,
         comments: 18,
         club: 'UBC Marketing Association',
+        image: 'https://picsum.photos/seed/forum1/800/400',
         content: 'Hey everyone! I\'m registering for COMM 296 next term and wanted to know which professors are best for this course. I\'ve heard there\'s a huge variance in teaching quality. I\'m hoping to actually learn the marketing concepts rather than just memorize for exams. Any recs?\n\nBonus if anyone can share what the workload is like — I\'m also taking COMM 291 and BCOM 301 that term.',
         replies: [
           { author: 'Tyler M.', timestamp: '1h 45m ago', text: 'Prof. Chen is amazing — really makes you think about real-world applications. Her midterm is tough but fair. Highly recommend if you can get into her section.', upvotes: 15 },
@@ -138,6 +139,7 @@
         upvotes: 28,
         comments: 12,
         club: 'Deloitte Campus Recruiting',
+        image: 'https://picsum.photos/seed/forum2/800/400',
         content: 'Just saw the Deloitte info session is coming up on March 20. Is anyone else planning to go? I\'m interested in their consulting practice but not sure if I should also look at audit. Would love to connect beforehand to compare notes — maybe we can grab coffee before the event?',
         replies: [
           { author: 'Sophie T.', timestamp: '4h ago', text: 'Going! I\'m targeting their Strategy & Analytics team. Anyone have tips on what to ask during the Q&A? I don\'t want to ask something generic.', upvotes: 9 },
@@ -186,6 +188,7 @@
         upvotes: 89,
         comments: 31,
         club: 'Bain & Company',
+        image: 'https://picsum.photos/seed/forum5/800/400',
         content: 'I landed 3 internship interviews through cold emailing this cycle and wanted to share what worked for me. The key: keep it under 150 words, reference something specific about the person or the company\'s recent news, ask for a 15-minute call (not a job), and follow up exactly once after 1 week. Happy to share my exact template below.',
         replies: [
           { author: 'James A.', timestamp: '2d 20h ago', text: 'Please share the template! This is exactly what I\'ve been looking for. Cold outreach terrifies me but I know I need to start.', upvotes: 17 },
@@ -877,13 +880,13 @@
             className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${selected ? '' : `${color} border-transparent opacity-80`}`}
             style={selected ? { background: '#6CC24A', color: '#002145', borderColor: '#6CC24A' } : {}}
           >
-            {tag}
+            {tag.toUpperCase()}
           </button>
         );
       }
       return (
         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
-          {tag}
+          {tag.toUpperCase()}
         </span>
       );
     }
@@ -903,12 +906,13 @@
     function EventCard({ event, onClick, onClubClick }) {
       return (
         <div
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform"
+          className="rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,33,69,0.07)' }}
           onClick={() => onClick(event)}
         >
           <div className="flex items-start justify-between mb-2 gap-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-gray-900 text-sm leading-snug">{event.title}</h3>
+              <h3 className="font-bold text-sm leading-snug" style={{ color: 'var(--text-primary)' }}>{event.title}</h3>
               <button
                 className="text-xs font-medium mt-0.5 hover:underline text-left" style={{ color: 'var(--accent)' }}
                 onClick={e => { e.stopPropagation(); onClubClick(event.club); }}
@@ -917,12 +921,12 @@
               </button>
             </div>
             <div className="flex-shrink-0">
-              <span className="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap" style={{ color: '#002145', background: '#EEF2FF' }}>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap" style={{ color: '#002145', background: 'var(--today-bg)' }}>
                 {formatShortDate(event.date)}
               </span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 line-clamp-2 mb-3">{event.description}</p>
+          <p className="text-xs line-clamp-2 mb-3" style={{ color: 'var(--text-muted)' }}>{event.description}</p>
           <div className="flex gap-1.5 flex-wrap">
             {event.tags.map(t => <TagPill key={t} tag={t} />)}
           </div>
@@ -1059,7 +1063,7 @@
             <div className="flex gap-1.5 flex-wrap mb-2">
               {event.tags.map(t => (
                 <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: '#6CC24A', color: '#002145' }}>
-                  {t}
+                  {t.toUpperCase()}
                 </span>
               ))}
             </div>
@@ -1213,7 +1217,7 @@
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${active ? '' : color}`}
                       style={active ? { background: '#6CC24A', color: '#002145', border: '2px solid #6CC24A' } : { border: '2px solid transparent' }}
                     >
-                      {tag}
+                      {tag.toUpperCase()}
                     </button>
                   );
                 })}
@@ -1482,14 +1486,14 @@
             <h1 className="text-xl font-bold mt-1" style={{ color: 'var(--header-text)' }}>Calendar</h1>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <div className="bg-white mx-4 mt-4 rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div className="mx-4 mt-4 rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,33,69,0.07)' }}>
               {/* Month nav */}
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 text-xl font-light"
                 >‹</button>
-                <span className="font-bold text-gray-900">{monthLabel}</span>
+                <span className="font-bold text-base text-gray-900">{monthLabel}</span>
                 <button
                   onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 text-xl font-light"
@@ -1498,7 +1502,7 @@
               {/* Day headers */}
               <div className="grid grid-cols-7 mb-1">
                 {['S','M','T','W','T','F','S'].map((d, i) => (
-                  <div key={i} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+                  <div key={i} className="text-center text-sm font-semibold text-gray-400 py-1">{d}</div>
                 ))}
               </div>
               {/* Day grid */}
@@ -1514,16 +1518,20 @@
                     <button
                       key={day}
                       onClick={() => setSelectedDay(isSelected ? null : dateStr)}
-                      className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-colors ${
+                      className={`relative flex flex-col items-center justify-center h-10 rounded-xl transition-colors ${
                         isSelected ? '' :
                         isToday ? 'font-bold' :
                         'hover:bg-gray-50 text-gray-700'
                       }`}
-                      style={isSelected ? { background: '#002145', color: 'white' } : isToday ? { background: 'var(--today-bg)', color: 'var(--today-text)' } : {}}
+                      style={isSelected
+                        ? { background: '#002145', color: 'white', boxShadow: '0 4px 14px rgba(0,33,69,0.35)' }
+                        : isToday
+                        ? { background: 'var(--today-bg)', color: 'var(--today-text)' }
+                        : {}}
                     >
-                      <span className={`text-sm ${isSelected || isToday ? 'font-bold' : 'font-medium'}`}>{day}</span>
+                      <span className={`text-base ${isSelected || isToday ? 'font-bold' : 'font-medium'}`}>{day}</span>
                       {hasEvents && (
-                        <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#6CC24A]' : 'bg-[#002145]'}`} />
+                        <span className={`absolute bottom-1 w-2 h-2 rounded-full ${isSelected ? 'bg-[#6CC24A]' : 'bg-[#002145]'}`} style={{ opacity: isSelected ? 1 : 0.5 }} />
                       )}
                     </button>
                   );
@@ -1536,13 +1544,13 @@
               {selectedDay ? (
                 <>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    <h2 className="text-base font-bold text-gray-500 uppercase tracking-wide">
                       {(normalizeDate(selectedDay) || new Date()).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </h2>
                     <button onClick={() => setSelectedDay(null)} className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Clear</button>
                   </div>
                   {dayEvents.length === 0 ? (
-                    <div className="text-center text-gray-400 py-10 text-sm bg-white rounded-2xl border border-gray-100">
+                    <div className="text-center py-10 text-sm rounded-2xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                       <p className="text-2xl mb-1">📭</p>
                       No events on this day.
                     </div>
@@ -1554,10 +1562,10 @@
                 </>
               ) : (
                 <>
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">{monthLabel} Events</h2>
+                  <h2 className="text-base font-bold text-gray-500 uppercase tracking-wide mb-3">{monthLabel} Events</h2>
                   <div className="space-y-3">
                     {monthEvents.length === 0 ? (
-                      <div className="text-center text-gray-400 py-10 text-sm bg-white rounded-2xl border border-gray-100">
+                      <div className="text-center py-10 text-sm rounded-2xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                         <p className="text-2xl mb-1">📭</p>
                         No events this month.
                       </div>
@@ -1594,6 +1602,8 @@
       const [npAnon, setNpAnon] = useState(false);
 
       const toggleTag = tag => setSelectedTags(p => p.includes(tag) ? p.filter(t => t !== tag) : [...p, tag]);
+      const [expandedPosts, setExpandedPosts] = useState(new Set());
+      const toggleExpand = (id, e) => { e.stopPropagation(); setExpandedPosts(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); };
       const toggleBookmark = (id, e) => { e.stopPropagation(); setBookmarked(b => ({ ...b, [id]: !b[id] })); };
       const toggleFollow = club => setFollowed(f => ({ ...f, [club]: !f[club] }));
 
@@ -1633,7 +1643,7 @@
               <ThemeToggle theme={theme} onToggle={onToggleTheme} />
             </div>
             <div className="flex-1 overflow-y-auto">
-              <div className="bg-white mx-4 mt-4 rounded-2xl border border-gray-100 shadow-sm p-4">
+              <div className="mx-4 mt-4 rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,33,69,0.06)' }}>
                 {/* Club info row */}
                 {selectedPost.club && (
                   <div className="flex items-center gap-2.5 mb-3 pb-3 border-b border-gray-100">
@@ -1677,7 +1687,7 @@
               <div className="px-4 mt-3 pb-6 space-y-2.5">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{selectedPost.replies.length} Comments</p>
                 {selectedPost.replies.map((reply, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
+                  <div key={i} className="rounded-2xl p-3.5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
                     <p className="text-sm text-gray-700 leading-relaxed mb-3 whitespace-pre-line">{reply.text}</p>
                     <div className="flex items-center justify-between text-xs text-gray-400">
                       <span className="font-medium">{reply.author} · {reply.timestamp}</span>
@@ -1700,7 +1710,7 @@
             </div>
             <h1 className="text-xl font-bold mt-1" style={{ color: 'var(--header-text)' }}>Forum</h1>
           </div>
-          <div className="bg-white border-b border-gray-100 pt-2.5 pb-1 flex-shrink-0">
+          <div className="pt-2.5 pb-1 flex-shrink-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
             <div className="relative px-4 mb-2">
               <span className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
               <input
@@ -1708,12 +1718,13 @@
                 placeholder="Search discussions..."
                 value={forumSearch}
                 onChange={e => setForumSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-gray-100 text-sm focus:outline-none"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
               />
             </div>
             {/* Trending row */}
             <div className="px-4 mb-2">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Trending now</p>
+              <p className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Trending now</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                 {trending.map(p => (
                   <button
@@ -1751,50 +1762,81 @@
                     className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${active ? '' : color}`}
                     style={active ? { background: '#002145', color: '#6CC24A' } : {}}
                   >
-                    {tag}
+                    {tag.toUpperCase()}
                   </button>
                 );
               })}
             </div>
           </div>
           {/* Posts list */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 pb-20">
+          <div className="flex-1 overflow-y-auto pb-20" style={{ background: 'var(--bg)' }}>
             {filtered.length === 0 ? (
-              <div className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-center py-12 text-sm mx-4 mt-4" style={{ color: 'var(--text-muted)' }}>
                 <p className="text-3xl mb-2">{specialFilter === 'saved' ? '🔖' : '🔍'}</p>
                 {specialFilter === 'saved' ? 'No saved posts yet.' : specialFilter === 'following' ? 'Follow a club to see their posts here.' : 'No posts match your search.'}
               </div>
-            ) : filtered.map(post => (
-              <button
-                key={post.id}
-                className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left active:scale-[0.98] transition-transform relative"
-                onClick={() => setSelectedPost(post)}
-              >
-                {/* Bookmark icon */}
-                <button
-                  className="absolute top-3 right-3 text-lg z-10"
-                  style={{ color: bookmarked[post.id] ? '#6CC24A' : '#D1D5DB' }}
-                  onClick={e => toggleBookmark(post.id, e)}
-                >
-                  🔖
-                </button>
-                <div className="flex gap-1.5 mb-2 pr-8">
-                  <TagPill tag={post.tag} />
-                </div>
-                <h3 className="font-bold text-gray-900 text-sm mb-1 leading-snug pr-6">{post.title}</h3>
-                <p className="text-xs text-gray-500 line-clamp-2 mb-3">{post.content}</p>
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span className="font-medium">{post.author} · {post.timestamp}</span>
-                  <div className="flex items-center gap-3 font-semibold">
-                    <button
-                      style={upvoted[post.id] ? { color: '#6CC24A' } : { color: '#9CA3AF' }}
-                      onClick={e => { e.stopPropagation(); setUpvoted(u => ({ ...u, [post.id]: !u[post.id] })); }}
-                    >▲ {post.upvotes + (upvoted[post.id] ? 1 : 0)}</button>
-                    <span>💬 {post.comments}</span>
-                  </div>
-                </div>
-              </button>
-            ))}
+            ) : (
+              <div className="mx-4 mt-4 rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,33,69,0.06)' }}>
+                {filtered.map((post, idx) => {
+                  const isExpanded = expandedPosts.has(post.id);
+                  return (
+                    <div key={post.id}>
+                      {idx > 0 && <div style={{ height: 1, background: 'var(--border)', margin: '0 16px' }} />}
+                      <button
+                        className="w-full p-5 text-left transition-colors relative"
+                        style={{ background: 'transparent' }}
+                        onClick={() => setSelectedPost(post)}
+                      >
+                        {/* Bookmark */}
+                        <button
+                          className="absolute top-5 right-5 text-base z-10"
+                          style={{ color: bookmarked[post.id] ? '#6CC24A' : '#D1D5DB' }}
+                          onClick={e => toggleBookmark(post.id, e)}
+                        >🔖</button>
+
+                        {/* Optional image */}
+                        {post.image && (
+                          <div className="rounded-xl overflow-hidden mb-3" style={{ height: 160 }}>
+                            <img src={post.image} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+
+                        <div className="flex gap-1.5 mb-2.5 pr-8">
+                          <TagPill tag={post.tag} />
+                        </div>
+                        <h3 className="font-bold text-sm mb-2 leading-snug pr-8" style={{ color: 'var(--text-primary)' }}>{post.title}</h3>
+
+                        {/* 2-line preview with Read more */}
+                        <div className="mb-4">
+                          <p className={`text-xs leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`} style={{ color: 'var(--text-muted)' }}>{post.content}</p>
+                          {post.content.length > 100 && (
+                            <button
+                              className="text-xs font-semibold mt-1.5"
+                              style={{ color: 'var(--accent)' }}
+                              onClick={e => toggleExpand(post.id, e)}
+                            >
+                              {isExpanded ? 'Read less' : 'Read more'}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Muted footer */}
+                        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{post.author} · {post.timestamp}</span>
+                          <div className="flex items-center gap-3 font-semibold text-xs">
+                            <button
+                              style={upvoted[post.id] ? { color: '#6CC24A' } : { color: '#9CA3AF' }}
+                              onClick={e => { e.stopPropagation(); setUpvoted(u => ({ ...u, [post.id]: !u[post.id] })); }}
+                            >▲ {post.upvotes + (upvoted[post.id] ? 1 : 0)}</button>
+                            <span style={{ color: 'var(--text-muted)' }}>💬 {post.comments}</span>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
           {/* FAB */}
           <button
@@ -1839,7 +1881,7 @@
                         ? { background: '#002145', color: '#6CC24A' }
                         : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
                     >
-                      {tag}
+                      {tag.toUpperCase()}
                     </button>
                   ))}
                 </div>
@@ -1935,7 +1977,7 @@
               <div>
                 <h1 className="text-white text-lg font-bold leading-tight">{profileName}</h1>
                 <p className="text-[#6CC24A] text-sm font-medium">{profileYear} · {profileSpec}</p>
-                <p className="text-blue-300 text-xs mt-0.5">UBC Sauder School of Business</p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(108,194,74,0.65)' }}>UBC Sauder School of Business</p>
               </div>
             </div>
           </div>
@@ -1948,17 +1990,17 @@
                 { label: 'Forum Posts', value: '2', modal: 'posts' },
                 { label: 'Clubs Joined', value: '3', modal: 'clubs' },
               ].map(({ label, value, modal }) => (
-                <button key={label} onClick={() => setStatModal(modal)} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 text-center active:scale-95 transition-transform">
+                <button key={label} onClick={() => setStatModal(modal)} className="rounded-2xl p-3 text-center active:scale-95 transition-transform" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,33,69,0.07)' }}>
                   <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{value}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-tight">{label}</p>
+                  <p className="text-xs mt-0.5 leading-tight" style={{ color: 'var(--text-muted)' }}>{label}</p>
                 </button>
               ))}
             </div>
 
             {/* Tag preferences */}
-            <div className="bg-white mx-4 mt-3 rounded-2xl border border-gray-100 shadow-sm p-4">
-              <h2 className="font-bold text-gray-900 text-sm mb-0.5">My Interests</h2>
-              <p className="text-xs text-gray-500 mb-3">Your selected tags prioritize what you see in the dashboard.</p>
+            <div className="mx-4 mt-3 rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,33,69,0.07)' }}>
+              <h2 className="font-bold text-sm mb-0.5" style={{ color: 'var(--text-primary)' }}>My Interests</h2>
+              <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Your selected tags prioritize what you see in the dashboard.</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_TAGS.map(tag => {
                   const color = TAG_COLORS[tag] || 'bg-gray-100 text-gray-700';
@@ -1970,7 +2012,7 @@
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all ${active ? '' : `${color} border-transparent`}`}
                       style={active ? { background: '#6CC24A', color: '#002145', borderColor: '#6CC24A' } : {}}
                     >
-                      {tag}
+                      {tag.toUpperCase()}
                     </button>
                   );
                 })}
@@ -1978,22 +2020,25 @@
             </div>
 
             {/* Settings items */}
-            <div className="bg-white mx-4 mt-3 rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 mb-6">
+            <div className="mx-4 mt-3 rounded-2xl mb-6 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,33,69,0.07)' }}>
               {[
                 { icon: '🔔', label: 'Notifications', desc: 'Alerts for events matching your tags', action: () => setNotifOpen(true) },
                 { icon: '📧', label: 'Email Digest', desc: 'Weekly summary of upcoming events', action: () => setDigestOpen(true) },
                 { icon: '✏️', label: 'Edit Profile', desc: 'Update your name, year, or specialization', action: openEdit },
                 { icon: '🎓', label: 'My Clubs', desc: 'View and manage your club memberships', action: () => setStatModal('clubs') },
                 { icon: '❓', label: 'Help & Feedback', desc: 'Report issues or share ideas', action: () => setFeedbackOpen(true) },
-              ].map(({ icon, label, desc, action }) => (
-                <button key={label} onClick={action || undefined} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors">
-                  <span className="text-xl">{icon}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">{label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
-                  </div>
-                  <span className="text-gray-300 text-lg">›</span>
-                </button>
+              ].map(({ icon, label, desc, action }, idx) => (
+                <div key={label}>
+                  {idx > 0 && <div style={{ height: 1, background: 'var(--border)' }} />}
+                  <button onClick={action || undefined} className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors" style={{ background: 'transparent' }}>
+                    <span className="text-xl">{icon}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{desc}</p>
+                    </div>
+                    <span className="text-lg" style={{ color: 'var(--border)' }}>›</span>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -2021,7 +2066,7 @@
                 { title: 'Anyone going to the Deloitte info session?', tag: '#hiring', upvotes: 28, timestamp: '5h ago' },
               ].map((post, i) => (
                 <div key={i} className="p-3 rounded-2xl" style={{ background: 'var(--input-bg)' }}>
-                  <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>{post.tag}</p>
+                  <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>{post.tag.toUpperCase()}</p>
                   <p className="text-sm font-semibold text-gray-900 leading-tight">{post.title}</p>
                   <p className="text-xs text-gray-400 mt-1">▲ {post.upvotes} · {post.timestamp}</p>
                 </div>
